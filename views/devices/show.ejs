@@ -1,0 +1,112 @@
+<% include ../partials/header %>
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <p class="lead">Network Inventory</p>
+            <div class="list-group">
+                <a href="/devices/"><li class="list-group-item active" href="/devices">All Devices</li></a>
+                <a href="/pops/"><li class="list-group-item">All POPs</li></a>
+                <a href="/governorates/"><li class="list-group-item" href="/governorates">All Governorates</li></a>
+                <a href="/sectors/"><li class="list-group-item">All Sectors</li></a>
+                <a href="/links/"><li class="list-group-item">All Links</li></a>
+                <a href="/users/"><li class="list-group-item">All Users</li></a>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <h1><%=device.name  %></h1>
+            <div class="thumbnail">
+                <img class="img-responsive" src="/images/router.png">
+                <div class="caption-full">
+                    <h4 class="pull-right">IP: <%=device.ipaddress  %></h4>
+                    <h4><a href="/devices/<%= device._id %>"><%=device.hostname  %></a></h4>
+                    <p><%= device.description  %></p>
+                    <p><em>Added By:  <%= device.author.email %></em></p>
+                    <!--/currentUser is setted up application.js middleware/-->
+                    <!--<!% console.log("show.ejs currentUser: "+ currentUser) %>-->
+                    <!--<!% if(currentUser && device.author.id.equals(currentUser._id)){ %>-->
+                        <a class="btn btn-warning" href="/devices/<%= device._id %>/edit">Edit</a>
+                        <form id="delete-form" action="/devices/<%= device._id %>/?_method=DELETE" method="POST">
+                            <button class="btn btn-danger">Delete</button>
+                        </form>
+                    <!-- <!% } %>-->
+                </div>
+            </div>
+
+            <div>
+                <h3>Device Interface List</h3>
+            </div>
+
+            <div class="btn-group" role="group" aria-label="devices">
+                <form id="interface-delete-form"  class="btn-group" action="/interfaces/-1/?_method=DELETE" method="POST">
+                    <button id="interface-delete-button"  type="button " class="btn  btn-danger">Delete Interface</button>
+                </form>
+                <form id="interface-update-form"  class="btn-group" action="" method="GET">
+                    <button type="button " class="btn  btn-warning">Update Interface</button>
+                </form>
+            </div>        
+
+            <div class="row text-left">
+                <div class="table-responsive">
+                    <table id="eventsTable" data-pagination="true" data-search="true"data-toggle="table" data-height="525" data-pagination="true" 
+                    data-maintain-selected="true" data-search="true" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" 
+                    data-toolbar="#toolbar" data-single-select="true">
+                        <thead>
+                            <tr>
+                                <th data-field="state" data-checkbox="true"> </th>
+                                <th data-field="_id" data-visible="false">ID</th>
+                                <th data-field="index">Index</th>
+                                <th data-field="name" data-sortable="true">Name</th>
+                                <th data-field="alias" data-sortable="true">Alias</th>
+                                <th data-field="description">Description</th>
+                                <th data-field="type" data-sortable="true">Type</th>
+                                <th data-field="speed" data-sortable="true">Speed</th>
+                                <th data-field="adminStatus" data-sortable="true">Admin Status</th>
+                                <th data-field="operStatus" data-sortable="true">Operational Status</th>
+                                <th data-field="actualspeed" data-sortable="true">Actual Speed</th>
+                                <th data-field="isDeviceUpLink" data-sortable="true">is Device UpLink</th>
+                                <th data-field="delete" data-sortable="true">Delete</th>
+                                <th data-field="createdby">Created By</th>
+                                <th data-field="updatedby">Last Updated By</th>
+                                <th data-field="datecreated" data-sortable="true">Date Created</th>
+                                <th data-field="dateupdated" data-sortable="true">Date Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% device.interfaces.forEach(function(interface){ %>
+                                <tr>
+                                    <td><% %></td>
+                                    <td><%= interface._id %></td>
+                                    <td><%= interface.index %></td>
+                                    <td><%= interface.name %></a></td>
+                                    <td><%= interface.alias %></td>
+                                    <td><%= interface.description %></td>
+                                    <td><%= interface.type %></td>
+                                    <td><%= interface.speed %></td>
+                                    <td><%= interface.adminStatus %></td>
+                                    <td><%= interface.operStatus %></td>
+                                    <td><%= interface.actualspeed %></td>
+                                    <td><%= interface.isDeviceUpLink %></td>
+                                    <td><%= interface.delete %></td>
+                                    <td><%= interface.author.email %></td>
+                                    <td><%= interface.lastUpdatedBy.email %></td>
+                                    <td>
+                                        <% if(interface.created) { %>
+                                            <%= interface.created.toDateString() %>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if(interface.updated) { %>
+                                            <%= interface.updated.toDateString() %>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>               
+    </div>
+</div>
+<% include ../partials/footer %>

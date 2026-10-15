@@ -1,0 +1,64 @@
+<% include ../partials/header %>
+    <!--< the class container will give space around our contents>-->
+    <div class="container">
+        <header class="jumbotron">
+            <!--<adding second container to keep spacing around contents when we resize the page>-->
+            <div class="container">
+                <h1>Network Inventory</h1>
+                <p>View Users Information</p>
+                <div class="btn-group" role="group" aria-label="all">
+                    <a href="/devices/"><button type="button" class="btn btn-default ">All Devices</button></a>
+                    <a href="/pops/"><button type="button" class="btn btn-default ">All POPs</button></a>
+                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
+                    <a href="/sectors/"><button type="button" class="btn btn-default ">All Sectors</button></a>
+                    <a href="/governorates/"><button type="button" class="btn btn-default ">All Governorates</button></a>
+                    <a href="/users/"><button type="button" class="btn btn-default ">All Users</button></a>
+                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
+                    <a href="/validatedusers/"><button type="button" class="btn btn-default active">All Validated Users</button></a>
+                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
+                    <a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces Data</button></a>
+                </div>        
+            </div>
+        </header>
+        <div class="btn-group" role="group" aria-label="users">
+            <form id="validateduser-add-form"  class="btn-group" action="/validatedusers/new" method="GET">
+                <button type="button " class="btn  btn-primary">Add User</button>
+            </form>
+            <form id="validateduser-delete-form"  class="btn-group" action="/validatedusers/-1/?_method=DELETE" method="POST">
+                <button id="validateduser-delete-button"  type="button " class="btn  btn-danger">Delete User</button>
+            </form>
+            <form id="validateduser-update-form"  class="btn-group" action="" method="GET">
+                <button type="button " class="btn  btn-warning">Update User</button>
+            </form>
+        </div>        
+        
+        <div class="row text-left">
+            <div class="table-responsive">
+                <table id="eventsTable" data-pagination="true" data-search="true"data-toggle="table" data-height="525" data-pagination="true" 
+                data-maintain-selected="true" data-search="true" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" 
+                data-toolbar="#toolbar" data-single-select="true">
+                    <thead>
+                        <tr>
+                            <th data-field="state" data-checkbox="true"> </th>
+                            <th data-field="_id" data-visible="false">ID</th>
+                            <th data-field="email">E-mail</th>
+                            <th data-field="role" data-sortable="true">Role</th>
+                            <th data-field="name" data-sortable="true">Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(function(user){ %>
+                            <tr>
+                                <td><% %></td>
+                                <td><%= user._id %></td>
+                                <td><%= user.email %></td>
+                                <td><%= user.role %></td>
+                                <td><%= user.name %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<% include ../partials/footer %>

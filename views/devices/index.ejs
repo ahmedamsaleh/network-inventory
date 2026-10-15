@@ -1,0 +1,96 @@
+<% include ../partials/header %>
+    <!--< the class container will give space around our contents>-->
+    <div class="container">
+        <header class="jumbotron">
+            <!--<adding second container to keep spacing around contents when we resize the page>-->
+            <div class="container">
+                <h1>Network Inventory</h1>
+                <p>View Devices Information</p>
+                <div class="btn-group" role="group" aria-label="all">
+                    <a href="/devices/"><button type="button" class="btn btn-default active">All Devices</button></a>
+                    <a href="/pops/"><button type="button" class="btn btn-default">All POPs</button></a>
+                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
+                    <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
+                    <a href="/governorates/"><button type="button" class="btn btn-default ">All Governorates</button></a>
+                    <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
+                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
+                    <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
+                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
+                    <a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces Data</button></a>
+                </div>        
+            </div>
+        </header>
+        <div class="btn-group" role="group" aria-label="devices">
+            <form id="device-add-form"  class="btn-group" action="/devices/new" method="GET">
+                <button type="button " class="btn  btn-primary">Add Device</button>
+            </form>
+            <form id="device-delete-form"  class="btn-group" action="/devices/-1/?_method=DELETE" method="POST">
+                <button type="button " class="btn  btn-danger">Delete Device</button>
+            </form>
+            <form id="device-update-form"  class="btn-group" action="" method="GET">
+                <button type="button " class="btn  btn-warning">Update Device</button>
+            </form>
+            <form id="device-sync-form"  class="btn-group" action="" method="GET">
+                <button type="button " class="btn  btn-info">Sync Device</button>
+            </form>
+        </div>        
+
+        <!--<adding flex style to fix issue related to left alignment>-->
+        <div class="row text-left">
+            <div class="table-responsive">
+                <table id="eventsTable" data-pagination="true" data-search="true"data-toggle="table" data-height="525" data-pagination="true" 
+                data-maintain-selected="true" data-search="true" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" 
+                data-toolbar="#toolbar" data-single-select="true">
+                    <thead>
+                        <tr>
+                            <th data-field="state" data-checkbox="true"> </th>
+                            <th data-field="_id" data-visible="false">ID</th>
+                            <th data-field="name" data-sortable="true">Name</th>
+                            <th data-field="ipaddress">IP Address</th>
+                            <th data-field="communitystring">Community String</th>
+                            <th data-field="datecreated" data-sortable="true">Date Created</th>
+                            <th data-field="dateupdated" data-sortable="true">Date Updated</th>
+                            <th data-field="description">Description</th>
+                            <th data-field="popname" data-sortable="true">POP Name</th>
+                            <th data-field="sectorname" data-sortable="true">Sector Name</th>
+                            <th data-field="governorate" data-sortable="true">Governorate</th>
+                            <th data-field="type" data-sortable="true">Type</th>
+                            <th data-field="model" data-sortable="true">Model</th>
+                            <th data-field="vendor" data-sortable="true">Vendor</th>
+                            <th data-field="defaultCollector" data-sortable="true">Default Collector</th>
+                            <th data-field="createdby">Created By</th>
+                            <th data-field="updatedby">Last Updated By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% devices.forEach(function(device){ %>
+                            <tr>
+                                <td><% %></td>
+                                <td><%= device._id %></td>
+                                <td><a href="/devices/<%= device._id %>"><%= device.hostname %></a></td>
+                                <td><%= device.ipaddress %></td>
+                                <td><%= device.communityString %></td>
+                                <td><%= device.createdAt.toDateString() %></td>
+                                <td>
+                                    <% if(device.updatedAt) { %>
+                                    <%= device.updatedAt.toDateString() %>
+                                    <% } %>
+                                </td>
+                                <td><%= device.description %></td>
+                                <td><%= device.popName.name %></td>
+                                <td><%= device.sector.name %></td>
+                                <td><%= device.governorate.name %></td>
+                                <td><%= device.type %></td>
+                                <td><%= device.model %></td>
+                                <td><%= device.vendor %></td>
+                                <td><%= device.defaultCollector %></td>
+                                <td><%= device.author.email %></td>
+                                <td><%= device.lastUpdatedBy.email %></td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<% include ../partials/footer %>
