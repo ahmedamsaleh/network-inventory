@@ -1,135 +1,127 @@
-var mongoose = require("mongoose");
-var Interface = require("./interface");
-var Address4 = require('ip-address').Address4;
+const mongoose = require('mongoose');
+const Interface = require('./interface');
+const Address4 = require('ip-address').Address4;
+const config = require('../config');
 
-var hostnameEmpty = function(val) {  
-    if (val && val.length != 0){    
-        return true;  
-    }  
-    return false;
+const hostnameEmpty = function (val) {
+  if (val && val.length != 0) {
+    return true;
+  }
+  return false;
 };
-var hostnameLength = function(val) {  
-    if (val && val.length >= 5){    
-        return true;  
-    }  
-    return false;
+const hostnameLength = function (val) {
+  if (val && val.length >= 5) {
+    return true;
+  }
+  return false;
 };
-var ipaddressEmpty = function(val) {  
-    if (val && val.length != 0){    
-        return true;  
-    }  
-    return false;
+const ipaddressEmpty = function (val) {
+  if (val && val.length != 0) {
+    return true;
+  }
+  return false;
 };
-var validIP = function(val) {  
-    if (val && new Address4(val).isValid()){    
-        return true;  
-    }  
-    return false;
+const validIP = function (val) {
+  if (val && new Address4(val).isValid()) {
+    return true;
+  }
+  return false;
 };
 
 //Database template setup
-var deviceSchema = new mongoose.Schema({
-    // hostname: {type: String, required: [true, 'Hostname is required'], validate: hostnameValidator},
-    hostname: {type: String, isAsync: true},//set `isAsync` option to `true` to make deprecation warnings go away.
-    ipaddress: {type: String, isAsync: true},
-    communityString: { type: String, default: '<DEFAULT_COMMUNITY_STRING>' },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: Date,
-    description: String,
-    discovered: {type: Boolean, default: false},//used to mark device as discovered, useful during sync process
-    defaultCollector: {type: Number, default: 1},
-    popName: {
-        id:{
-            type: mongoose.Schema.Types.ObjectId,
-            //ref is the name of the model
-            ref: "POP"
-        },    
-        name: String  
+const deviceSchema = new mongoose.Schema({
+  // hostname: {type: String, required: [true, 'Hostname is required'], validate: hostnameValidator},
+  hostname: String,
+  ipaddress: String,
+  communityString: { type: String, default: config.snmp.defaultCommunity },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: Date,
+  description: String,
+  discovered: { type: Boolean, default: false }, //used to mark device as discovered, useful during sync process
+  defaultCollector: { type: Number, default: 1 },
+  popName: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      //ref is the name of the model
+      ref: 'POP',
     },
-    sector: {
-        id:{                
-            type: mongoose.Schema.Types.ObjectId,
-            //ref is the name of the model
-            ref: "Sector"
-        },
-        name: String
+    name: String,
+  },
+  sector: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      //ref is the name of the model
+      ref: 'Sector',
     },
-    governorate: {
-        id:{                
-            type: mongoose.Schema.Types.ObjectId,
-            //ref is the name of the model
-            ref: "Governorate"
-        },    
-        name: String
+    name: String,
+  },
+  governorate: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      //ref is the name of the model
+      ref: 'Governorate',
     },
-    author: {
-        id:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        },
-        email: String
+    name: String,
+  },
+  author: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
-    lastUpdatedBy: {
-        id:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        },
-        email: String
+    email: String,
+  },
+  lastUpdatedBy: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
-    type: String,
-    model: String,
-    vendor: String,
-    interfaces: [Interface.schema]
-    // interfaces: [
-    //         {
-    //             id: {
-    //                     type: mongoose.Schema.Types.ObjectId,
-    //                     //ref is the name of the model
-    //                     ref: "Interface"
-    //                 },
-    //             name: String
-    //         }
-    //     ]
+    email: String,
+  },
+  type: String,
+  model: String,
+  vendor: String,
+  interfaces: [Interface.schema],
+  // interfaces: [
+  //         {
+  //             id: {
+  //                     type: mongoose.Schema.Types.ObjectId,
+  //                     //ref is the name of the model
+  //                     ref: "Interface"
+  //                 },
+  //             name: String
+  //         }
+  //     ]
 });
 deviceSchema.path('hostname').validate(hostnameEmpty, "hostname can't be empty!");
 deviceSchema.path('hostname').validate(hostnameLength, 'hostname is too short!');
 deviceSchema.path('ipaddress').validate(ipaddressEmpty, "IP Address can't be empty!");
 deviceSchema.path('ipaddress').validate(validIP, 'IP address is not valid');
 
-var Device = mongoose.model("Device", deviceSchema);
+const Device = mongoose.model('Device', deviceSchema);
 
-deviceSchema.path('hostname').validate(function (value, responseCB) {  
-    Device.find({hostname: value}, function(err, hostnames){    
-        if (err){      
-            // console.log(err);      
-            return responseCB(false);    
-        }    
-        // console.log('Number found: ' + hostnames.length);    
-        if (hostnames.length) {      
-            responseCB(false); 
-            // validation failed    
-        } else {      
-            responseCB(true); 
-            // validation passed    
-        }  
-    })
+// async validators: resolve to false when another document already uses the value
+deviceSchema.path('hostname').validate(async function (value) {
+  let hostnames;
+  try {
+    hostnames = await Device.find({ hostname: value });
+  } catch (err) {
+    // console.log(err);
+    return false;
+  }
+  // console.log('Number found: ' + hostnames.length);
+  return hostnames.length === 0;
 }, 'Duplicate hostname');
 
-deviceSchema.path('ipaddress').validate(function (value, responseCB) {  
-    Device.find({ipaddress: value}, function(err, ipaddresses){    
-        if (err){      
-            // console.log(err);      
-            return responseCB(false);    
-        }    
-        console.log('Number found: ' + ipaddresses.length);    
-        if (ipaddresses.length) {      
-            responseCB(false); 
-            // validation failed    
-        } else {      
-            responseCB(true); 
-            // validation passed    
-        }  
-    })
+deviceSchema.path('ipaddress').validate(async function (value) {
+  let ipaddresses;
+  try {
+    ipaddresses = await Device.find({ ipaddress: value });
+  } catch (err) {
+    // console.log(err);
+    return false;
+  }
+  console.log('Number found: ' + ipaddresses.length);
+  return ipaddresses.length === 0;
 }, 'Duplicate IP');
 
 module.exports = Device; //mongoose.model("Device", deviceSchema);

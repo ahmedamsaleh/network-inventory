@@ -1,156 +1,131 @@
-var express             = require("express"),
-    passport            = require("passport"),
-    LocalStrategy       = require("passport-local");
-var User                = require("../models/user");
-var ValidatedUser       = require("../models/validatedUser");
-var nodemailer = require('nodemailer'); 
-var smtpConfig = {
-    host: '<HOST>',
-    port: 25,
-    secure: false, // upgrade later with STARTTLS
-    auth: {
-        user: '<USER>@<DOMAIN>',
-        pass: '<yourpassword>'
-    }
-};
-var transporter = nodemailer.createTransport(smtpConfig);
+const express = require('express'),
+  passport = require('passport');
+const User = require('../models/user');
+const ValidatedUser = require('../models/validatedUser');
+const nodemailer = require('nodemailer');
+const config = require('../config');
+const transporter = nodemailer.createTransport(config.smtp);
 
-var mailOptions = {
-  from: '<SENDER>@<DOMAIN>',
-  to: '<RECIPIENT>@<DOMAIN>',
-  subject: 'Activate your Network Inventory account'
+const mailOptions = {
+  from: config.mail.from,
+  to: config.mail.to,
+  subject: config.mail.subject,
 };
 
-var router              = express.Router();
+const router = express.Router();
+
+// e-mails the account activation link; never rejects
+async function sendVerificationMail(user) {
+  const authenticationURL =
+    'http://' + config.ip + ':' + config.port + '/verify?authToken=' + user.authToken;
+  mailOptions.text =
+    'Hi, you have signed for access to Network Inventory, please activate it by clicking on the following URL:\n' +
+    authenticationURL;
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.log(error);
+  }
+}
 //add routes
-router.get("/home",function(request, response) {
-    response.render("home");
+router.get('/home', function (request, response) {
+  response.render('home');
 });
-router.get("/",function(request, response) {
-    response.render("landing");
+router.get('/', function (request, response) {
+  response.render('landing');
 });
 //PASS environment parameters
-router.get("/getenv", function(req, res){
-    res.json({ ip: process.env.IP, port: process.env.PORT });
+router.get('/getenv', function (req, res) {
+  res.json({ ip: config.ip, port: config.port });
 });
 //======================
 // AUTH ROUTES
 //======================
 //show register Form
-router.get("/signup",function(request,response){
-    response.render("signup");
+router.get('/signup', function (request, response) {
+  response.render('signup');
 });
 //handle signup logic
-router.post("/signup",function(request,response){
-    var newUser =new User({name: request.body.name, email: request.body.email});
-    ValidatedUser.findOne({email: request.body.email},function(error,foundUser){
-        if(error){
-            request.flash("error",error);
-            return response.render("signup");
-        }
-        else if(foundUser == null){
-            request.flash("error","User not allowed");
-            return response.render("email-error");
-        }
-        else{
-            User.register(newUser,request.body.password,function(error,user){
-                if(error){
-                    request.flash("error",error.message);
-                    return response.render("signup");
-                }
-                else{
-                        //send email verification
-                        var authenticationURL = "http://"+process.env.IP+":"+process.env.PORT+"/verify?authToken=" + user.authToken;
-                        mailOptions.text = "Hi, you have signed for access to Network Inventory, please activate it by clicking on the following URL:\n"+authenticationURL;
-                        transporter.sendMail(mailOptions, function(error, info){
-                          if (error) {
-                            console.log(error);
-                          } 
-                        }); 
-                        response.redirect('/email-verification');
-                }
-            });    
-        }
-    });
+router.post('/signup', async function (request, response) {
+  const newUser = new User({ name: request.body.name, email: request.body.email });
+  let foundUser;
+  try {
+    foundUser = await ValidatedUser.findOne({ email: request.body.email });
+  } catch (error) {
+    request.flash('error', error);
+    return response.render('signup');
+  }
+  if (foundUser == null) {
+    request.flash('error', 'User not allowed');
+    return response.render('email-error');
+  }
+  let user;
+  try {
+    user = await User.register(newUser, request.body.password);
+  } catch (error) {
+    request.flash('error', error.message);
+    return response.render('signup');
+  }
+  //send email verification (in the background)
+  sendVerificationMail(user);
+  response.redirect('/email-verification');
 });
 
-router.get('/email-verification', function(request, response) {
-    response.render('email-verification', {title: 'Email verification sent!'})
+router.get('/email-verification', function (request, response) {
+  response.render('email-verification', { title: 'Email verification sent!' });
 });
 
-router.get('/verify', function(request, response) {
-    User.verifyEmail(request.query.authToken, function(error, existingAuthToken) {
-        if(error){
-            console.log('error:', error);
-        }
-        else{
-            response.render('email-verification', { title : 'Email verified succesfully!' });
-        }
-    });
+router.get('/verify', async function (request, response) {
+  try {
+    await User.verifyEmail(request.query.authToken);
+  } catch (error) {
+    console.log('error:', error);
+    return;
+  }
+  response.render('email-verification', { title: 'Email verified succesfully!' });
 });
 
 //show login form
-router.get("/login",function(request,response){
-    response.render("login");
+router.get('/login', function (request, response) {
+  response.render('login');
 });
 
 // handling login logic
-router.post("/login",passport.authenticate('local',{
-    successRedirect: "/home",
-    failureRedirect: "/login"
-}));
+router.post(
+  '/login',
+  passport.authenticate('local', {
+    successRedirect: '/home',
+    failureRedirect: '/login',
+  })
+);
 
 //logout ROUTE
-router.get("/logout",function(request,response){
-    request.logout();
-    request.flash("success","logged you out");
-    response.redirect("/login");
+router.get('/logout', function (request, response, next) {
+  // passport >= 0.6 requires a callback (the session is regenerated)
+  request.logout(function (error) {
+    if (error) {
+      return next(error);
+    }
+    request.flash('success', 'logged you out');
+    response.redirect('/login');
+  });
 });
 
 //show change password form
-router.get("/changepass",function(request,response){
-    response.render("changepassword");
+router.get('/changepass', function (request, response) {
+  response.render('changepassword');
 });
 
-router.post('/changepass' , function (request, res, next) {
-     if (request.body.newpass !== request.body.newpassconfirm) {
-        throw new Error('password and confirm password do not match');
-     }
+router.post('/changepass', async function (request, res, next) {
+  if (request.body.newpass !== request.body.newpassconfirm) {
+    throw new Error('password and confirm password do not match');
+  }
 
-     var useremail = request.body.email;
-
-     var newpass = request.body.newpass;
-
-User.findOne({email: useremail},function(error,foundUser){
-    if(error) {console.log(error);}
-    else{
-        foundUser.email = user;
-        foundUser=newpass
-        user.save(function(err){
-         if (err) { next(err) }
-         else {
-             res.redirect('/home');
-         }
-     });
-
-    }
-
+  // Changing the password is not available: this form is unauthenticated
+  // (anyone could reset any account by e-mail) and the original handler
+  // never worked (it referenced an undefined variable and always failed).
+  // Kept as an explicit error so the behavior (HTTP 500) is unchanged.
+  throw new Error('password change is not available');
 });
-     user.save(function(err){
-         if (err) { next(err) }
-         else {
-             res.redirect('/home');
-         }
-     });
-});
-
-//middleware
-function isLoggedIn(request,response,next){
-    if(request.isAuthenticated()){
-        return next();
-    }
-    request.flash("error", "You need to be logged in to do that");
-    response.redirect("/login");
-}
 
 module.exports = router;
