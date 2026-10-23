@@ -8,6 +8,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "start": "node application.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -30,7 +31,7 @@
     "mongoose": "^9.10.3",
     "mongoose-csv": "^1.1.0",
     "mongoose-paginate-v2": "^1.9.5",
-    "net-snmp": "^1.2.4",
+    "net-snmp": "^3.26.3",
     "nodemailer": "^10.0.12",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",

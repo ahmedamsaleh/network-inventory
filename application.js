@@ -60,7 +60,7 @@ mongoose.connect(config.mongoUrl).catch(function (error) {
 // sharing the mongoose connection, so logins survive restarts.
 app.use(
   require('express-session')({
-    secret: config.secret,
+    secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({

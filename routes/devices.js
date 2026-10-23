@@ -7,8 +7,7 @@ const Sector = require('../models/sector');
 const Governorate = require('../models/governorate');
 const Link = require('../models/link');
 const middleware = require('../middleware');
-const util = require('util');
-const snmp = require('net-snmp');
+const snmpSession = require('../services/snmpSession');
 const config = require('../config');
 const seedDB = require('../seeds');
 const snmpConstants = require('../lookUps');
@@ -71,13 +70,18 @@ function discoveredDevice(device) {
   self.ifTableRead = false;
   self.ifXTableRead = false;
   self.inSyncMode = false;
-  self.session = snmp.createSession(
-    self.device.ipaddress,
-    S(self.device.communityString).trim().s,
-    { timeout: config.snmp.timeoutMs }
-  );
+  self.session = snmpSession.createSession({
+    host: self.device.ipaddress,
+    community: S(self.device.communityString).trim().s,
+    timeoutMs: config.snmp.timeoutMs,
+    onError: function (error) {
+      logger.error('device ' + self.name + ' SNMP session error: ' + error);
+    },
+  });
   // promise-returning (oid, columns, maxRepetitions) -> table
-  self.tableColumns = util.promisify(self.session.tableColumns).bind(self.session);
+  self.tableColumns = function (oid, columns, maxRepetitions) {
+    return self.session.tableColumns(oid, columns, maxRepetitions);
+  };
 
   //parse ifAlias
   self.parseInternationalInterfaces = function (ifAlias) {
@@ -422,30 +426,37 @@ function discoveredDevice(device) {
   };
   // walk ifTable then ifXTable over SNMP and process the result; never rejects
   self.walkTables = async function () {
-    let table;
     try {
-      table = await self.tableColumns(oids.ifTable.OID, oids.ifTable.Columns, maxRepetitions);
-    } catch (error) {
-      logger.error('device ' + self.name + ' has ' + error.toString() + ' while reading ifTable');
-      self.ifTableError = true;
-      self.ifXTableError = true;
-      return;
-    }
-    self.retrieveIfTable(table);
-    let xTable;
-    try {
-      xTable = await self.tableColumns(oids.ifXTable.OID, oids.ifXTable.Columns, maxRepetitions);
-    } catch (error) {
-      logger.error(error.toString());
-      logger.error('device ' + self.name + ' has ' + error.toString() + ' while reading ifXTable');
-      self.ifTableError = true;
-      self.ifXTableError = true;
-      return;
-    }
-    try {
-      await self.processIfXTable(xTable);
-    } catch (error) {
-      logger.error(error);
+      let table;
+      try {
+        table = await self.tableColumns(oids.ifTable.OID, oids.ifTable.Columns, maxRepetitions);
+      } catch (error) {
+        logger.error('device ' + self.name + ' has ' + error.toString() + ' while reading ifTable');
+        self.ifTableError = true;
+        self.ifXTableError = true;
+        return;
+      }
+      self.retrieveIfTable(table);
+      let xTable;
+      try {
+        xTable = await self.tableColumns(oids.ifXTable.OID, oids.ifXTable.Columns, maxRepetitions);
+      } catch (error) {
+        logger.error(error.toString());
+        logger.error(
+          'device ' + self.name + ' has ' + error.toString() + ' while reading ifXTable'
+        );
+        self.ifTableError = true;
+        self.ifXTableError = true;
+        return;
+      }
+      try {
+        await self.processIfXTable(xTable);
+      } catch (error) {
+        logger.error(error);
+      }
+    } finally {
+      // release the UDP socket once the walk is over (the old code leaked one per walk)
+      self.session.close();
     }
   };
   this.syncInterfaces = async function () {

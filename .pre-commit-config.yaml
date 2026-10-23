@@ -1,0 +1,8 @@
+# For users of the pre-commit framework (https://pre-commit.com):
+#   pip install pre-commit && pre-commit install
+# (Plain git users get the same scan through .githooks/pre-commit.)
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
