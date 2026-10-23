@@ -1,8 +1,16 @@
+# secrets / local configuration
 .env
-node_modules
-log
-import
-export
-.log
-.txt
+
+# dependencies
+node_modules/
+
+# runtime output
+*.log
+*.txt
+nohup.out
+log/
+import/
+export/
+
+# test-harness cache (provisioned mongod shim)
 .cache/

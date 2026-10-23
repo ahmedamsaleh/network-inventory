@@ -46,7 +46,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function bootApp() {
   const port = await getFreePort();
 
-  process.env.SECRET = process.env.SECRET || 'test-secret';
+  process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
   process.env.IP = '127.0.0.1';
   process.env.PORT = String(port);
   process.env.DEV_DB =

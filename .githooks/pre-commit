@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Pre-commit secret scan with gitleaks (https://github.com/gitleaks/gitleaks).
+# Installed by `npm run prepare` (git config core.hooksPath .githooks).
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not installed - skipping secret scan (CI still runs it)." >&2
+  echo "            install: https://github.com/gitleaks/gitleaks#installing" >&2
+  exit 0
+fi
+
+# scan only what is about to be committed
+gitleaks git --pre-commit --staged --redact --config .gitleaks.toml --verbose

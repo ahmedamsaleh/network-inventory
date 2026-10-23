@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    ports:
+      - '${PORT:-8080}:8080'
+    environment:
+      # listen on all interfaces inside the container
+      IP: 0.0.0.0
+      PORT: 8080
+      MONGO_URL: mongodb://mongo:27017/network-inventory
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      DEFAULT_SNMP_COMMUNITY: ${DEFAULT_SNMP_COMMUNITY:-public}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_TO: ${MAIL_TO:-}
+    volumes:
+      - ./import:/app/import
+      - ./export:/app/export
+      - ./log:/app/log
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ ping: 1 }).ok']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

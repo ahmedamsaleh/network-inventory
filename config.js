@@ -29,8 +29,8 @@ const config = {
   ip: env.IP || '127.0.0.1',
   port: env.PORT || '8080',
 
-  // express-session secret
-  secret: required('SECRET'),
+  // express-session secret (required; the app refuses to start without it)
+  sessionSecret: required('SESSION_SECRET'),
 
   // MongoDB (application data + sessions)
   dbName,
@@ -42,7 +42,9 @@ const config = {
 
   // SNMP discovery
   snmp: {
-    defaultCommunity: env.SNMP_COMMUNITY || '<DEFAULT_COMMUNITY_STRING>',
+    // community used when a device is created without one
+    // (DEFAULT_SMP_COMMUNITY is accepted as an alias of DEFAULT_SNMP_COMMUNITY)
+    defaultCommunity: env.DEFAULT_SNMP_COMMUNITY || env.DEFAULT_SMP_COMMUNITY || 'public',
     timeoutMs: Number(env.SNMP_TIMEOUT_MS || 10000),
     maxRepetitions: Number(env.SNMP_MAX_REPETITIONS || 20),
   },
@@ -53,19 +55,16 @@ const config = {
     timezone: env.SYNC_TIMEZONE || 'Africa/Cairo',
   },
 
-  // e-mail (account verification)
+  // e-mail (account verification); no defaults for hosts or credentials
   smtp: {
-    host: env.SMTP_HOST || '<HOST>',
+    host: env.SMTP_HOST,
     port: Number(env.SMTP_PORT || 25),
     secure: env.SMTP_SECURE === 'true', // upgrade later with STARTTLS
-    auth: {
-      user: env.SMTP_USER || '<USER>@<DOMAIN>',
-      pass: env.SMTP_PASS || '<yourpassword>',
-    },
+    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
   },
   mail: {
-    from: env.MAIL_FROM || '<SENDER>@<DOMAIN>',
-    to: env.MAIL_TO || '<RECIPIENT>@<DOMAIN>',
+    from: env.MAIL_FROM,
+    to: env.MAIL_TO,
     subject: env.MAIL_SUBJECT || 'Activate your Network Inventory account',
   },
 };

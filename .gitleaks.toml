@@ -1,0 +1,21 @@
+# gitleaks configuration (https://github.com/gitleaks/gitleaks)
+# Used by the pre-commit hook (.githooks/pre-commit) and the CI "secret-scan" job.
+title = "network-inventory"
+
+[extend]
+# start from the built-in rule set
+useDefault = true
+
+[allowlist]
+description = "documented placeholders and test fixtures (no real secrets)"
+paths = [
+  '''^\.env\.example$''',
+  '''^package-lock\.json$''',
+  '''^tests/''',
+  '''^public/''',
+]
+regexes = [
+  '''test-secret''',
+  '''secret123''',
+  '''change-me''',
+]
