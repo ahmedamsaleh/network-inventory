@@ -1,19 +1,19 @@
-var mongoose = require("mongoose");
-var mongoosePaginate = require('mongoose-paginate');
+const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 //Database template setup
-var governorateSchema = new mongoose.Schema({
-    name: {type: String, required: [true,'Name is required']},
-    acronym: String,
-    author: {
-        id:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        },
-        email: String
-    }
+const governorateSchema = new mongoose.Schema({
+  name: { type: String, required: [true, 'Name is required'] },
+  acronym: String,
+  author: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    email: String,
+  },
 });
 
 governorateSchema.plugin(mongoosePaginate);
 
-var Governorate = mongoose.model("Governorate", governorateSchema);
-module.exports = Governorate;//mongoose.model("Governorate", governorateSchema);
+const Governorate = mongoose.model('Governorate', governorateSchema);
+module.exports = Governorate; //mongoose.model("Governorate", governorateSchema);
