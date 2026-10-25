@@ -4,77 +4,145 @@ const Device = require('../models/device');
 const Interface = require('../models/interface');
 const middleware = require('../middleware');
 const pagination = require('../services/pagination');
+const parser = require('../middleware/parser/parser');
+
+const TRUE_WORDS = ['yes', 'true', '1', 'on'];
+
+/**
+ * Coerces one submitted form value according to its catalog entry.
+ * Returns undefined when the value should not be written.
+ */
+function coerceField(entry, raw) {
+  if (raw === undefined) return undefined;
+  const text = typeof raw === 'string' ? raw.trim() : raw;
+  switch (entry.kind) {
+    case 'number': {
+      if (text === '' || text === null) return null;
+      const number = Number(text);
+      return Number.isFinite(number) ? number : undefined;
+    }
+    case 'boolean':
+      return TRUE_WORDS.includes(String(text).toLowerCase());
+    case 'select':
+      return entry.options.includes(String(text)) ? String(text) : undefined;
+    case 'date': {
+      if (text === '' || text === null) return null;
+      const date = new Date(text);
+      return Number.isNaN(date.getTime()) ? undefined : date;
+    }
+    case 'json':
+      return undefined; // read-only
+    default:
+      return text === null ? '' : String(text);
+  }
+}
+
+/** applies every editable catalog field present in the form to the document */
+function applyFormToInterface(doc, form) {
+  for (const entry of Interface.fieldCatalog) {
+    if (entry.readOnly) continue;
+    const value = coerceField(entry, form[entry.name]);
+    if (value !== undefined) doc.set(entry.name, value);
+  }
+}
+
+/** copies the owning device's descriptive fields onto the interface */
+function applyDeviceToInterface(doc, device) {
+  doc.device = { id: device._id, hostname: device.hostname, ipaddress: device.ipaddress };
+  doc.hostname = device.hostname;
+  doc.ipaddress = device.ipaddress;
+  doc.pop = device.pop || (device.popName && device.popName.name) || '';
+  doc.devType = device.type || '';
+  doc.devVendor = device.vendor || '';
+  doc.devModel = device.model || '';
+  doc.devPOP = device.pop || '';
+  doc.devPOPLongName = device.popLongName || '';
+  doc.devCabinet = device.cabinet || '';
+  doc.devCty = device.cty || (device.county && device.county.name) || '';
+  doc.devDistrict = device.district || '';
+  doc.devSector = (device.sector && device.sector.name) || '';
+  doc.devPOPType = device.popType || '';
+  doc.btMSANCode = device.btMSANCode || '';
+  doc.btMngIP = device.btMngIP || '';
+  doc.btSector = device.btSector || '';
+  doc.btDistrict = device.btDistrict || '';
+}
+
+/** recomputes the derived speed texts / category from the stored speeds */
+function refreshSpeedTexts(doc) {
+  Object.assign(
+    doc,
+    parser.parseSpeed({
+      ifSpeed: doc.ifSpeed || doc.speed || 0,
+      ifHighSpeed: doc.ifHighSpeed || 0,
+      sp_speed: doc.sp_speed || 0,
+      actualspeed: doc.actualspeed || 0,
+    })
+  );
+}
 
 // bootstrap-table server-side pagination: GET /interfaces/pagination?limit&offset&search&sort&order
+const CATALOG_NAMES = Interface.fieldCatalog.map((entry) => entry.name);
 const interfacePaginationSpec = {
   Model: Interface,
   searchFields: [
-    'name',
-    'alias',
-    'description',
+    'ifName',
+    'ifAlias',
+    'ifDescr',
+    'ifTypeStr',
+    'hostname',
+    'ipaddress',
+    'pop',
     'type',
-    'device.hostname',
-    'device.ipaddress',
+    'specialService',
     'secondHost',
     'secondPOP',
+    'secondInterface',
+    'label',
     'connectionType',
     'linkType',
+    'speedCat',
+    'sp_provider',
+    'sp_customer',
+    'sp_service',
+    'sp_linkNumber',
+    'sp_CID',
   ],
-  sortable: {
-    index: 'index',
-    name: 'name',
-    device: 'device.hostname',
-    alias: 'alias',
-    type: 'type',
-    speed: 'speed',
-    adminStatus: 'adminStatus',
-    operStatus: 'operStatus',
-    actualspeed: 'actualspeed',
-    isDeviceUpLink: 'isDeviceUpLink',
-    delete: 'delete',
-    created: 'created',
-    updated: 'updated',
-  },
-  defaultSort: 'device',
-  // only what views/interfaces/index.ejs displays
-  projection: {
-    index: 1,
-    name: 1,
-    'device.hostname': 1,
-    alias: 1,
-    description: 1,
-    type: 1,
-    speed: 1,
-    adminStatus: 1,
-    operStatus: 1,
-    actualspeed: 1,
-    isDeviceUpLink: 1,
-    delete: 1,
-    'author.email': 1,
-    'lastUpdatedBy.email': 1,
-    created: 1,
-    updated: 1,
-  },
+  sortable: Object.fromEntries(CATALOG_NAMES.map((name) => [name, name])),
+  defaultSort: 'hostname',
+  // every catalog field plus the legacy names the list still shows
+  projection: Object.fromEntries(
+    [
+      ...CATALOG_NAMES,
+      'name',
+      'alias',
+      'index',
+      'description',
+      'author.email',
+      'lastUpdatedBy.email',
+      'created',
+      'updated',
+      'device.hostname',
+      'device.ipaddress',
+    ].map((name) => [name, 1])
+  ),
   mapRow: function (intf) {
-    return {
-      _id: String(intf._id),
-      index: intf.index,
-      name: intf.name,
-      device: intf.device && intf.device.hostname,
-      alias: intf.alias,
-      description: intf.description,
-      type: intf.type,
-      speed: intf.speed,
-      adminStatus: intf.adminStatus,
-      operStatus: intf.operStatus,
-      actualspeed: intf.actualspeed,
-      isDeviceUpLink: intf.isDeviceUpLink,
-      delete: intf.delete,
-      createdBy: intf.author && intf.author.email,
-      updatedBy: intf.lastUpdatedBy && intf.lastUpdatedBy.email,
-      created: intf.created,
-      updated: intf.updated,
-    };
+    const row = { _id: String(intf._id) };
+    for (const name of CATALOG_NAMES) {
+      row[name] = name === 'counters' ? JSON.stringify(intf.counters || {}) : intf[name];
+    }
+    // legacy fallbacks for documents created before the canonical names existed
+    row.ifName = row.ifName || intf.name;
+    row.ifAlias = row.ifAlias || intf.alias;
+    row.ifIndex = row.ifIndex === undefined || row.ifIndex === null ? intf.index : row.ifIndex;
+    row.ifDescr = row.ifDescr || intf.description;
+    row.hostname = row.hostname || (intf.device && intf.device.hostname);
+    row.ipaddress = row.ipaddress || (intf.device && intf.device.ipaddress);
+    row.createdAt = row.createdAt || intf.created;
+    row.lastUpdate = row.lastUpdate || intf.updated;
+    row.createdBy = intf.author && intf.author.email;
+    row.updatedBy = intf.lastUpdatedBy && intf.lastUpdatedBy.email;
+    return row;
   },
 };
 router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
@@ -83,7 +151,7 @@ router.get('/pagination', middleware.isLoggedIn, async function (request, respon
 
 //INDEX - the interface list is loaded by the table from /interfaces/pagination
 router.get('/', middleware.isLoggedIn, function (request, response) {
-  response.render('interfaces/index');
+  response.render('interfaces/index', { fields: Interface.fieldCatalog });
 });
 
 // the router is mounted at /interfaces, so the owning device is identified by
@@ -122,15 +190,30 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
     return response.redirect('/devices');
   }
   //create new interface (linked to the device) with the current user as author
-  anInterface.device = {
-    id: foundDevice._id,
-    hostname: foundDevice.hostname,
-    ipaddress: foundDevice.ipaddress,
-  };
-  anInterface.author = { id: request.user._id, email: request.user.email };
+  const newInterface = new Interface();
+  applyFormToInterface(newInterface, anInterface);
+  // legacy input names of the form / API
+  for (const [legacy, canonical] of [
+    ['name', 'ifName'],
+    ['alias', 'ifAlias'],
+    ['index', 'ifIndex'],
+    ['description', 'ifDescr'],
+    ['speed', 'ifSpeed'],
+  ]) {
+    if (anInterface[legacy] !== undefined && anInterface[canonical] === undefined) {
+      const value = coerceField(
+        { kind: ['index', 'speed'].includes(legacy) ? 'number' : 'text' },
+        anInterface[legacy]
+      );
+      if (value !== undefined) newInterface.set(canonical, value);
+    }
+  }
+  applyDeviceToInterface(newInterface, foundDevice);
+  newInterface.author = { id: request.user._id, email: request.user.email };
+  newInterface.applyParsedAlias();
   let createdInterface;
   try {
-    createdInterface = await Interface.create(anInterface);
+    createdInterface = await newInterface.save();
   } catch (error) {
     console.log(error);
     request.flash('error', 'Something went wrong: ' + error.message);
@@ -153,7 +236,7 @@ router.get('/:id', async function (request, response) {
     console.log(error);
     return;
   }
-  response.render('interfaces/edit', { interface: foundInterface });
+  response.render('interfaces/edit', { interface: foundInterface, fields: Interface.fieldCatalog });
 });
 
 //DESTROY Interface ROUTE
@@ -215,6 +298,7 @@ router.get('/:id/edit', middleware.isLoggedIn, async function (request, response
     response.render('interfaces/edit', {
       interface: foundInterface,
       device: foundInterface.device,
+      fields: Interface.fieldCatalog,
     });
   } else {
     request.flash('error', "can't find interface!!!");
@@ -224,8 +308,6 @@ router.get('/:id/edit', middleware.isLoggedIn, async function (request, response
 //UPDATE INTERFACE ROUTE
 router.put('/:id', middleware.isLoggedIn, async function (request, response) {
   //find and update the correct DEVICE
-  request.body.interface.updated = new Date();
-  request.body.interface.lastUpdatedBy = { id: request.user._id, email: request.user.email };
 
   let foundInterface;
   try {
@@ -235,44 +317,32 @@ router.put('/:id', middleware.isLoggedIn, async function (request, response) {
     request.flash('error', 'something went wrong while updating the interface');
     return response.redirect('/devices/');
   }
-  foundInterface.name = request.body.interface.name;
-  foundInterface.alias = request.body.interface.alias;
-  foundInterface.description = request.body.interface.description;
-  foundInterface.type = request.body.interface.type;
-  foundInterface.actualspeed = request.body.interface.actualspeed;
-  if (
-    request.body.interface.isDeviceUpLink &&
-    request.body.interface.isDeviceUpLink.toLowerCase() == 'yes'
-  ) {
-    foundInterface.isDeviceUpLink = true;
-  } else {
-    foundInterface.isDeviceUpLink = false;
+  const form = request.body.interface;
+  // legacy input names (name/alias/description/speed) map onto the canonical ones
+  for (const [legacy, canonical] of [
+    ['name', 'ifName'],
+    ['alias', 'ifAlias'],
+    ['description', 'ifDescr'],
+    ['speed', 'ifSpeed'],
+  ]) {
+    if (form[legacy] !== undefined && form[canonical] === undefined) form[canonical] = form[legacy];
   }
-  foundInterface.secondHost = request.body.interface.secondHost;
-  foundInterface.secondPOP = request.body.interface.secondPOP;
-  foundInterface.connectionType = request.body.interface.connectionType;
-  if (
-    request.body.interface.isPOPUpLink &&
-    request.body.interface.isPOPUpLink.toLowerCase() == 'yes'
-  ) {
-    foundInterface.isPOPUpLink = true;
-  } else {
-    foundInterface.isPOPUpLink = false;
+  applyFormToInterface(foundInterface, form);
+  // the international details only apply to international links
+  if (!foundInterface.linkType || foundInterface.linkType.toLowerCase() !== 'international') {
+    for (const field of ['provider', 'service', 'linkID', 'subCable', 'teCID', 'termination']) {
+      foundInterface.set(field, undefined);
+    }
   }
-  foundInterface.linkBandwidth = request.body.interface.linkBandwidth;
-  foundInterface.linkIP = request.body.interface.linkIP;
-  foundInterface.linkNumber = request.body.interface.linkNumber;
-  foundInterface.linkType = request.body.interface.linkType;
-  if (foundInterface.linkType && foundInterface.linkType.toLowerCase() == 'international') {
-    foundInterface.provider = request.body.interface.provider;
-    foundInterface.service = request.body.interface.service;
-    foundInterface.linkID = request.body.interface.linkID;
-    foundInterface.subCable = request.body.interface.subCable;
-    foundInterface.teCID = request.body.interface.teCID;
-    foundInterface.termination = request.body.interface.termination;
+  // a changed alias is re-parsed (sp_* fields, special service, label)
+  if (foundInterface.isModified('ifAlias') || foundInterface.isModified('alias')) {
+    foundInterface.applyParsedAlias();
+  } else {
+    refreshSpeedTexts(foundInterface);
   }
 
   foundInterface.updated = new Date();
+  foundInterface.lastUpdate = foundInterface.updated;
   foundInterface.lastUpdatedBy = { id: request.user._id, email: request.user.email };
 
   try {

@@ -1,132 +1,59 @@
 <%- include('../partials/header') %>
-// <script> 
-// function checkIsInternational() {
-//     // document.getElementById("panel").style.display = "block";
-//     var select = this.value;
-//     console.log(select);
-// }
-// </script>
-
+<%
+  // fields: Interface.fieldCatalog (models/interface.js) - every field is rendered here
+  const groups = [];
+  for (const field of fields) {
+    let group = groups.find((g) => g.name === field.group);
+    if (!group) { group = { name: field.group, fields: [] }; groups.push(group); }
+    group.fields.push(field);
+  }
+  function fieldValue(field) {
+    const value = interface[field.name];
+    if (value === undefined || value === null) return '';
+    if (field.kind === 'date') return value instanceof Date ? value.toISOString() : String(value);
+    if (field.kind === 'json') return JSON.stringify(value);
+    return String(value);
+  }
+%>
 <div class="container">
     <div class="row">
-        <h1 style="text-align: center">Edit Interface</h1>
-        <div style="width: 30%; margin: 25px auto;">
-            <!-- <form action="/devices/<%= interface.device.id %>/interfaces/<%= interface._id %>?_method=PUT" method="POST"> -->
+        <h1 style="text-align: center">Edit Interface <%= interface.ifName || interface.name %> <small>on <%= interface.hostname || (interface.device && interface.device.hostname) %></small></h1>
+        <div style="width: 60%; margin: 25px auto;">
             <form action="/interfaces/<%= interface._id %>?_method=PUT" method="POST">
+                <% groups.forEach(function (group) { %>
+                <h3><%= group.name %></h3>
+                <div class="row">
+                    <% group.fields.forEach(function (field) { %>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="interface-<%= field.name %>"><%= field.label %></label>
+                            <% if (field.kind === 'select') { %>
+                            <select id="interface-<%= field.name %>" class="form-control" name="interface[<%= field.name %>]">
+                                <% field.options.forEach(function (option) { %>
+                                <option value="<%= option %>" <%= fieldValue(field) === option ? 'selected' : '' %>><%= option === '' ? '(none)' : option %></option>
+                                <% }); %>
+                            </select>
+                            <% } else if (field.kind === 'boolean') { %>
+                            <select id="interface-<%= field.name %>" class="form-control" name="interface[<%= field.name %>]">
+                                <option value="no" <%= interface[field.name] ? '' : 'selected' %>>no</option>
+                                <option value="yes" <%= interface[field.name] ? 'selected' : '' %>>yes</option>
+                            </select>
+                            <% } else if (field.readOnly) { %>
+                            <input id="interface-<%= field.name %>" class="form-control" type="text" value="<%= fieldValue(field) %>" readonly>
+                            <% } else { %>
+                            <input id="interface-<%= field.name %>" class="form-control" type="<%= field.kind === 'number' ? 'number' : 'text' %>" <%= field.kind === 'number' ? 'step="any"' : '' %> name="interface[<%= field.name %>]" value="<%= fieldValue(field) %>" <%= field.kind === 'date' ? 'placeholder="ISO date, e.g. 2024-01-31T10:00:00Z"' : '' %>>
+                            <% } %>
+                        </div>
+                    </div>
+                    <% }); %>
+                </div>
+                <% }); %>
                 <div class="form-group">
-                    <label for="interfacename">Interface Name</label>
-                    <input class="form-control" type="text" name="interface[name]" value="<%= interface.name %>">
-                </div>
-                <div class="form-group">
-                    <label for="description">Interface Description</label>
-                    <input class="form-control" type="text" name="interface[description]" value="<%= interface.description %>">
-                </div>
-                <div class="form-group">
-                    <label for="alias">Interface Alias</label>
-                    <input class="form-control" type="text" name="interface[alias]" value="<%= interface.alias %>">
-                </div>
-                <div class="form-group">
-                    <label for="index">Interface Index</label>
-                    <input class="form-control" type="text" name="interface[index]" value="<%= interface.index %>" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="type">Interface Type</label>
-                    <input class="form-control" type="text" name="interface[type]" value="<%= interface.type %>">
-                </div>
-                <div class="form-group">
-                    <label for="speed">Interface Speed</label>
-                    <input class="form-control" type="text" name="interface[speed]" value="<%= interface.speed %>" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="actualspeed">Interface Actual Speed</label>
-                    <input class="form-control" type="text" name="interface[actualspeed]" value="<%= interface.actualspeed %>">
-                </div>
-                <div class="form-group">
-                    <label for="deviceUpLink">Is Device UpLink</label>
-                    <!-- <input class="form-control" type="text" name="interface[isDeviceUpLink]" value="<%= interface.isDeviceUpLink %>"> -->
-                    <select class="form-control selectpicker" name="interface[isDeviceUpLink]" value="<%= interface.isDeviceUpLink %>">
-                      <option>Yes</option>
-                      <option>No</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="POPUpLink">Is POP UpLink</label>
-                    <select class="form-control selectpicker" name="interface[isPOPUpLink]" value="<%= interface.isPOPUpLink %>">
-                      <option>Yes</option>
-                      <option>No</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="secondHost">Second Host</label>
-                    <input class="form-control" type="text" name="interface[secondHost]" value="<%= interface.secondHost %>">
-                </div>
-                <div class="form-group">
-                    <label for="secondPOP">Second POP</label>
-                    <input class="form-control" type="text" name="interface[secondPOP]" value="<%= interface.secondPOP %>">
-                </div>
-                <div class="form-group">
-                    <label for="connectionType">Connection Type</label>
-                    <input class="form-control" type="text" name="interface[connectionType]" value="<%= interface.connectionType %>">
-                </div>
-                <div class="form-group">
-                    <label for="linkBandwidth">Link Bandwidth</label>
-                    <input class="form-control" type="text" name="interface[linkBandwidth]" value="<%= interface.linkBandwidth %>">
-                </div>
-                <div class="form-group">
-                    <label for="linkIP">Link IP</label>
-                    <input class="form-control" type="text" name="interface[linkIP]" value="<%= interface.linkIP %>">
-                </div>
-                <div class="form-group">
-                    <label for="linkNumber">Link Number</label>
-                    <input class="form-control" type="text" name="interface[linkNumber]" value="<%= interface.linkNumber %>">
-                </div>
-                <div class="form-group">
-                    <label for="linkType">Link Type</label>
-                    <select id="interface-link-type" class="form-control select2-single" name="interface[linkType]" data-init-text="<%= interface.linkType %>">
-                      <option value="Local_LAN">Local_LAN</option>
-                      <option value="Core_WAN">Core_WAN</option>
-                      <option value="Normal">Normal</option>
-                      <option value="DSLAM_UpLink">DSLAM_UpLink</option>
-                      <option value="International">International</option>
-                      <option value="None">None</option>
-                    </select>
-                </div>
-                <div id="provider" class="form-group" style="display:none;">
-                <!-- <div id="provider" class="form-group"> -->
-                    <label for="provider">Provider</label>
-                    <input class="form-control" type="text" name="interface[provider]" value="<%= interface.provider %>">
-                </div>
-                <div id="service" class="form-group" style="display:none;">
-                    <label for="service">Service</label>
-                    <input class="form-control" type="text" name="interface[service]" value="<%= interface.service %>">
-                </div>
-                <div id="linkID" class="form-group" style="display:none;">
-                    <label for="linkID">Link ID</label>
-                    <input class="form-control" type="text" name="interface[linkID]" value="<%= interface.linkID %>">
-                </div>
-                <div id="subCable" class="form-group" style="display:none;">
-                    <label for="subCable">Sub Cable</label>
-                    <input class="form-control" type="text" name="interface[subCable]" value="<%= interface.subCable %>">
-                </div>
-                <div id="teCID" class="form-group" style="display:none;">
-                    <label for="teCID">TE CID</label>
-                    <input class="form-control" type="text" name="interface[teCID]" value="<%= interface.teCID %>">
-                </div>
-                <div id="termination" class="form-group" style="display:none;">
-                    <label for="termination">Termination</label>
-                    <input class="form-control" type="text" name="interface[termination]" value="<%= interface.termination %>">
-                </div>
-                <div class="form-group">
-                    <label for="devicename">Device Name</label>
-                    <input class="form-control" type="text" name="interface[device][hostname]" value="<%= interface.device.hostname %>" readonly>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-lg btn-primary btn-block">Update</button>
+                    <button class="btn btn-lg btn-primary btn-block">Submit!</button>
                 </div>
             </form>
-            <a href="/devices/<%= interface.device.id %>">Go Back</a>
+            <a href="/interfaces/">Go Back</a>
         </div>
     </div>
 </div>
 <%- include('../partials/footer') %>
-
