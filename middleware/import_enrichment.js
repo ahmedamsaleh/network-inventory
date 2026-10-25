@@ -279,19 +279,35 @@ async function* readRows(file, options = {}) {
       styles: 'ignore',
       entries: 'emit',
     });
-    for await (const worksheet of workbook) {
+    let sheetFound = false;
+    let rowsRead = false;
+    try {
+      for await (const worksheet of workbook) {
+        if (
+          sheetFound ||
+          (options.sheet &&
+            String(worksheet.name).toLowerCase() !== String(options.sheet).toLowerCase())
+        ) {
+          continue;
+        }
+        sheetFound = true;
+        for await (const row of worksheet) {
+          rowsRead = true;
+          const cells = Array.isArray(row.values) ? row.values.slice(1) : [];
+          const out = emit(row.number, cells);
+          if (out) yield out;
+        }
+      }
+    } catch (error) {
       if (
-        options.sheet &&
-        String(worksheet.name).toLowerCase() !== String(options.sheet).toLowerCase()
+        rowsRead ||
+        !(error instanceof TypeError) ||
+        error.message !== "Cannot read properties of undefined (reading 'sheets')"
       ) {
-        continue;
+        throw error;
       }
-      for await (const row of worksheet) {
-        const cells = Array.isArray(row.values) ? row.values.slice(1) : [];
-        const out = emit(row.number, cells);
-        if (out) yield out;
-      }
-      break; // one sheet only
+      // ExcelJS 4.4 can encounter worksheet entries before workbook metadata.
+      yield* readXlsxFallback(file, options, emit);
     }
     return;
   }
@@ -309,6 +325,23 @@ async function* readRows(file, options = {}) {
   for await (const record of parser) {
     rowNumber += 1;
     const out = emit(rowNumber, record);
+    if (out) yield out;
+  }
+}
+
+async function* readXlsxFallback(file, options, emit) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(String(file));
+  const sheet = options.sheet
+    ? workbook.worksheets.find(
+        (worksheet) => worksheet.name.toLowerCase() === String(options.sheet).toLowerCase()
+      )
+    : workbook.worksheets[0];
+  if (!sheet) return;
+  for (let rowNumber = 1; rowNumber <= sheet.rowCount; rowNumber++) {
+    const row = sheet.getRow(rowNumber);
+    const cells = Array.isArray(row.values) ? row.values.slice(1) : [];
+    const out = emit(row.number, cells);
     if (out) yield out;
   }
 }

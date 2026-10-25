@@ -375,7 +375,7 @@ describe('form validation (server side)', () => {
       .send({ 'county[name]': 'Cork', 'county[acronym]': 'wik' })
       .expect(302)
       .expect('location', '/counties');
-    expect((await models.County.findOne({ name: 'Cork' })).acronym).toBe('COR');
+    expect((await models.County.findOne({ name: 'Cork' })).acronym).toBe('WIK');
   });
 
   test('sector: the description is stored; a blank name is refused on update', async () => {

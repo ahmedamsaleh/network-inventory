@@ -59,7 +59,7 @@ describe('POP CRUD (authenticated)', () => {
     // the form's countyAcro/sector strings now land on the flat fields
     expect(pop.cty).toBe('GAL');
     expect(pop.sector).toBe('S1');
-    expect(pop.pop_cty).toBe('ZMK_GAL');
+    expect(pop.pop_cty).toBe('HWT_GAL');
     expect(pop.popType).toBe('Unknown');
     expect(pop.popLongName).toBe('Unknown');
   });

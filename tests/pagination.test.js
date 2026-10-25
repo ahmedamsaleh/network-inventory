@@ -160,7 +160,7 @@ describe('GET /devices/pagination', () => {
     expect(byVendor.body.total).toBe(3);
     const bySector = await agent.get('/devices/pagination').query({ search: 'south' }).expect(200);
     expect(bySector.body.total).toBe(4);
-    const byPopCode = await agent.get('/devices/pagination').query({ search: 'wik' }).expect(200);
+    const byPopCode = await agent.get('/devices/pagination').query({ search: 'cor' }).expect(200);
     expect(byPopCode.body.total).toBe(6);
     const byType = await agent.get('/devices/pagination').query({ search: 'switch' }).expect(200);
     expect(byType.body.total).toBe(6);
