@@ -7,7 +7,7 @@
  *  - A freshly signed-up user cannot log in until the e-mail verification
  *    authToken has been consumed via GET /verify.
  *  - Failed logins redirect back to /login, successful ones to /home.
- *  - GET /home is NOT protected by isLoggedIn (anyone can open it).
+ *  - GET /home is the dashboard and is protected by isLoggedIn.
  *  - POST /changepass always responds 500 (the handler references an
  *    undefined `user` variable), so password change is effectively broken.
  */
@@ -168,11 +168,9 @@ describe('logout', () => {
 });
 
 describe('misc auth-adjacent routes (current behavior)', () => {
-  test('GET / (landing) and GET /home are publicly accessible', async () => {
+  test('GET / (landing) is public; GET /home (dashboard) needs a login', async () => {
     await app.anon().get('/').expect(200);
-    // NOTE: /home is not guarded by isLoggedIn even though it is the
-    // post-login landing page.
-    await app.anon().get('/home').expect(200);
+    await app.anon().get('/home').expect(302).expect('location', '/login');
   });
 
   test('GET /getenv leaks IP/PORT configuration as JSON (no auth required)', async () => {
@@ -180,24 +178,24 @@ describe('misc auth-adjacent routes (current behavior)', () => {
     expect(res.body).toEqual({ ip: '127.0.0.1', port: String(app.server.address().port) });
   });
 
-  test('GET /changepass renders, but POST /changepass always fails with 500', async () => {
+  test('GET /changepass renders; POST /changepass reports its problems as flash messages', async () => {
     await app.anon().get('/changepass').expect(200);
-
-    // mismatching passwords: handler throws synchronously -> 500
-    await app
-      .anon()
+    const client = app.agent();
+    // mismatching passwords
+    await client
       .post('/changepass')
       .type('form')
       .send({ email: 'bob@example.com', newpass: 'a', newpassconfirm: 'b' })
-      .expect(500);
-
-    // NOTE (not asserted here because it additionally raises an
-    // uncaughtException in the background, which jest reports as a test
-    // error): POSTing *matching* passwords also responds 500, because the
-    // handler references an undefined `user` variable (`user.save(...)`),
-    // and the User.findOne callback later crashes the process with a
-    // second ReferenceError (`foundUser.email = user`). Password change is
-    // completely broken; the app only survives in production because of a
-    // process-level `uncaughtException` swallow in application.js.
+      .expect(302)
+      .expect('location', '/changepass');
+    expect((await client.get('/changepass').expect(200)).text).toContain('do not match');
+    // matching passwords: the (unauthenticated) password change is deliberately not available
+    await client
+      .post('/changepass')
+      .type('form')
+      .send({ email: 'bob@example.com', newpass: 'newpw123', newpassconfirm: 'newpw123' })
+      .expect(302)
+      .expect('location', '/changepass');
+    expect((await client.get('/changepass').expect(200)).text).toContain('not available');
   });
 });

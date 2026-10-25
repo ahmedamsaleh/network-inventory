@@ -1,0 +1,23 @@
+<% const p = pop || {}; const editing = Boolean(pop); %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>POP</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'pop[name]', label: 'Name', value: p.name, required: true, readonly: editing, maxlength: 128, placeholder: 'e.g. Dublin main POP', help: editing ? 'The name identifies the POP and cannot be changed' : '' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'pop[shortName]', label: 'Short name', value: p.shortName, required: true, maxlength: 32, pattern: '[A-Za-z0-9_\\-]+', title: 'letters, digits, dashes and underscores', placeholder: 'e.g. ONGAR', help: 'Device hostnames start with it; pop_cty = shortName_cty' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'pop[popLongName]', label: 'POP long name', value: p.popLongName, maxlength: 128, placeholder: 'Unknown' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'pop[popType]', label: 'POP type', value: p.popType, maxlength: 32, placeholder: 'e.g. Core, Edge, Access' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'pop[cty]', label: 'County acronym', value: p.cty, maxlength: 6, pattern: '[A-Za-z0-9]{0,6}', title: 'up to 6 letters or digits', placeholder: 'e.g. DUB' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'pop[district]', label: 'District', value: p.district, maxlength: 64, placeholder: 'Unknown' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'pop[sector]', label: 'Sector', value: p.sector, maxlength: 64, placeholder: 'Unknown' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'pop[parentPOP]', label: 'Parent POP (shortName_cty)', value: p.parentPOP, maxlength: 64, placeholder: 'Unknown' }) %></div>
+            <% if (editing) { %><div class="col-md-6"><%- include('../partials/field', { name: 'ro-pop_cty', label: 'pop_cty (computed)', value: p.pop_cty, readonly: true }) %></div><% } %>
+        </div>
+    </div>
+</div>

@@ -1,47 +1,21 @@
 const express = require('express');
+const audit = require('../services/audit');
 const router = express.Router({ mergeParams: true });
 const POP = require('../models/pop');
+const Device = require('../models/device');
+const Cabinet = require('../models/cabinet');
 const middleware = require('../middleware');
 const seedDB = require('../seeds');
 const config = require('../config');
 const pagination = require('../services/pagination');
+const datasets = require('../services/datasets');
+const importEnrichment = require('../middleware/import_enrichment');
 let aPOP = new POP();
 
 // bootstrap-table server-side pagination: GET /pops/pagination?limit&offset&search&sort&order
 // (also used by the select2 pickers on the device forms, see public/javascript/select2-texture.js)
-const popPaginationSpec = {
-  Model: POP,
-  searchFields: ['name', 'shortName', 'district', 'countyAcro.acronym', 'sector.name'],
-  sortable: {
-    name: 'name',
-    acronym: 'shortName',
-    county: 'countyAcro.acronym',
-    district: 'district',
-    sector: 'sector.name',
-  },
-  defaultSort: 'name',
-  // only what views/pops/index.ejs displays
-  projection: {
-    name: 1,
-    shortName: 1,
-    'countyAcro.acronym': 1,
-    district: 1,
-    'sector.name': 1,
-  },
-  mapRow: function (pop) {
-    return {
-      _id: String(pop._id),
-      id: String(pop._id), // select2 option id
-      name: pop.name,
-      acronym: pop.shortName,
-      county: pop.countyAcro && pop.countyAcro.acronym,
-      district: pop.district,
-      sector: pop.sector && pop.sector.name,
-    };
-  },
-};
 router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
-  response.json(await pagination.paginatedResponse(request.query, popPaginationSpec));
+  response.json(await pagination.paginatedResponse(request.query, datasets.pops));
 });
 //INDEX - the POP list is loaded by the table from /pops/pagination
 router.get('/', middleware.isLoggedIn, function (request, response) {
@@ -51,7 +25,6 @@ router.get('/', middleware.isLoggedIn, function (request, response) {
 //should show the form will post data to /pops
 router.get('/new', middleware.isLoggedIn, function (request, response) {
   if (config.seed) {
-    console.log('config.seed: ' + config.seed);
     seedDB(request.user);
   }
   response.render('pops/new');
@@ -60,33 +33,51 @@ router.get('/new', middleware.isLoggedIn, function (request, response) {
 //CREATE - add new POP to DB
 router.post('/', middleware.isLoggedIn, async function (request, response) {
   //get data from a form and add to POP array
-  const name = request.body.pop.name;
-  const shortName = request.body.pop.shortName;
-  const countyAcro = request.body.pop.countyAcro;
-  const district = request.body.pop.district;
-  const sector = request.body.pop.sector;
-
-  aPOP = {
-    name: name,
-    shortName: shortName,
-    countyAcro: countyAcro,
-    district: district,
-    sector: sector,
+  aPOP = Object.assign(POP.normalizeInput(request.body.pop || {}), {
     author: { id: request.user._id, email: request.user.email },
-  };
+  });
 
-  console.log(aPOP);
   let createdPOP;
   try {
     createdPOP = await POP.create(aPOP);
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong');
-    return;
+    // validation problems are user input: tell the user and return to the form
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/pops/new');
   }
-  console.log('new POP created and saved');
-  console.log(createdPOP);
-  request.flash('success', 'Successfully added POP');
+  request.flash('success', 'Successfully added POP ' + createdPOP.name);
+  response.redirect('/pops');
+});
+
+// IMPORT - "POPs" sheet (CSV: shortName, cty, district, sector, popType, popLongName)
+router.post('/import', middleware.isLoggedIn, async function (request, response) {
+  if (!request.files || !request.files.file) {
+    request.flash('error', 'No file was uploaded');
+    return response.redirect('/pops');
+  }
+  const file = request.files.file;
+  const target = importEnrichment.uploadPath(file.name);
+  try {
+    await file.mv(target);
+  } catch (error) {
+    return response.status(500).send(error.message);
+  }
+  const summary = await importEnrichment.importPops(target, {
+    author: { id: request.user._id, email: request.user.email },
+  });
+  if (summary.errors.length) {
+    request.flash('error', 'POP import: ' + summary.errors.slice(0, 5).join(' | '));
+  }
+  request.flash(
+    'success',
+    'POP import: ' +
+      summary.created +
+      ' created, ' +
+      summary.updated +
+      ' updated, ' +
+      summary.skipped +
+      ' skipped'
+  );
   response.redirect('/pops');
 });
 
@@ -94,7 +85,13 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
 router.get('/:id', middleware.isLoggedIn, async function (request, response) {
   const foundPOP = await middleware.findByIdOr404(POP, request.params.id, response, 'POP', '/pops');
   if (!foundPOP) return;
-  response.render('pops/show', { pop: foundPOP });
+  const [devices, cabinets] = await Promise.all([
+    Device.countDocuments(
+      Device.activeFilter({ $or: [{ 'popName.id': foundPOP._id }, { pop: foundPOP.shortName }] })
+    ),
+    Cabinet.find({ pop: foundPOP.shortName }, { cabinet: 1 }).sort({ cabinet: 1 }).lean(),
+  ]);
+  response.render('pops/show', { pop: foundPOP, usage: { devices, cabinets } });
 });
 
 //EDIT POP ROUTE
@@ -107,26 +104,35 @@ router.get('/:id/edit', async function (request, response) {
 router.put('/:id', async function (request, response) {
   //find and update the correct POP
   try {
-    await POP.findByIdAndUpdate(request.params.id, request.body.pop);
+    const current = await POP.findById(request.params.id).lean();
+    if (!current) {
+      request.flash('error', 'POP not found');
+      return response.redirect('/pops');
+    }
+    await POP.findByIdAndUpdate(
+      request.params.id,
+      POP.normalizeInput(request.body.pop || {}, current),
+      { runValidators: true }
+    );
   } catch (error) {
-    console.log(error);
-    return response.redirect('/pops');
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/pops/' + request.params.id + '/edit');
   }
-  //redirect somewhere (show page)
+  request.flash('success', 'POP updated');
   response.redirect('/pops/' + request.params.id);
 });
 
 //DESTROY POP ROUTE
 router.delete('/:id', async function (request, response) {
   if (request.params.id == -1) {
-    response.redirect('/pops');
+    return response.redirect('/pops');
   }
 
-  console.log('Deleting POP with id: ' + request.params.id);
   try {
-    await POP.findByIdAndDelete(request.params.id);
+    // the audit entry (with a snapshot) is written before the document is removed
+    await audit.deleteById(request, 'pop', POP, request.params.id);
   } catch (error) {
-    console.log(error);
+    request.flash('error', 'Delete failed (nothing was removed): ' + error.message);
   }
   response.redirect('/pops');
 });

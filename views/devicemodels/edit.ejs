@@ -1,0 +1,9 @@
+<%- include('../partials/header', { pageTitle: 'Edit ' + model.name }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Edit ' + model.name, breadcrumbs: [['Device models', '/devicemodels'], [model.name, '/devicemodels/' + model._id], ['Edit']] }) %>
+    <form method="POST" action="/devicemodels/<%= model._id %>/?_method=PUT">
+        <%- include('_form', { model: model, types: types }) %>
+        <%- include('../partials/form-actions', { label: 'Save changes', cancelHref: '/devicemodels/' + model._id }) %>
+    </form>
+</div>
+<%- include('../partials/footer') %>

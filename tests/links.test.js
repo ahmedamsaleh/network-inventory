@@ -30,8 +30,11 @@ describe('Link CRUD (authenticated)', () => {
       device2: 'pre-dev2',
       interface2: 'ge-0/0/8',
     });
+    // the list itself is loaded by bootstrap-table from /links/pagination
     const res = await agent.get('/links').expect(200);
-    expect(res.text).toContain('pre-dev1');
+    expect(res.text).toContain('data-url="/links/pagination"');
+    const json = await agent.get('/links/pagination').expect(200);
+    expect(json.body.rows.map((r) => r.device1)).toContain('pre-dev1');
   });
 
   test('NEW: GET /links/new renders the form', async () => {

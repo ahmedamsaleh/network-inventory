@@ -1,0 +1,20 @@
+<%#
+  Page title block used by every page.
+    title       main heading
+    subtitle    (optional) muted text after the heading
+    actions     (optional) raw HTML rendered right-aligned (buttons / links)
+    breadcrumbs (optional) [[label, href], ..., [label]] (last one without href = current page)
+%>
+<% const crumbs = typeof breadcrumbs !== 'undefined' && breadcrumbs ? breadcrumbs : []; %>
+<% if (crumbs.length) { %>
+<ol class="breadcrumb app-breadcrumb">
+    <li><a href="/home">Dashboard</a></li>
+    <% crumbs.forEach(function (crumb, index) { %>
+        <% if (crumb[1] && index < crumbs.length - 1) { %><li><a href="<%= crumb[1] %>"><%= crumb[0] %></a></li><% } else { %><li class="active"><%= crumb[0] %></li><% } %>
+    <% }); %>
+</ol>
+<% } %>
+<div class="page-header app-page-header clearfix">
+    <% if (typeof actions !== 'undefined' && actions) { %><div class="pull-right app-page-actions"><%- actions %></div><% } %>
+    <h1><%= title %> <% if (typeof subtitle !== 'undefined' && subtitle) { %><small><%= subtitle %></small><% } %></h1>
+</div>

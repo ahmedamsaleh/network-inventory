@@ -1,0 +1,15 @@
+<%- include('../partials/header', { pageTitle: 'Decommissioned devices' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Decommissioned devices', subtitle: 'soft-deleted; hidden from the active lists', breadcrumbs: [['Devices', '/devices'], ['Decommissioned']],
+        actions: '<a class="btn btn-default" href="/audit"><i class="fa fa-history"></i> Audit log</a>' }) %>
+    <% if (isAdmin) { %>
+        <%- include('../partials/toolbar', { buttons: [
+            { label: 'Restore device', template: '/devices/{id}/restore', method: 'GET', cls: 'btn-success', icon: 'fa-undo', id: 'device-restore-form' },
+            { label: 'Delete permanently', template: '/devices/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'device-delete-form', confirm: 'Permanently delete the selected device and its archived interfaces? This cannot be undone (the audit log keeps the last copy).' },
+        ] }) %>
+    <% } else { %>
+        <p class="text-muted"><i class="fa fa-lock"></i> Only administrators can restore or permanently delete decommissioned devices.</p>
+    <% } %>
+    <%- include('../partials/data-table', { url: '/devices/decommissioned/pagination', columns: columns.decommissionedDevices, sortName: 'decommissionedAt', sortOrder: 'desc' }) %>
+</div>
+<%- include('../partials/footer') %>

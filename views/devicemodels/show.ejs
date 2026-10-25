@@ -1,0 +1,25 @@
+<%- include('../partials/header', { pageTitle: model.name }) %>
+<%
+  let actions = '<a class="btn btn-warning" href="/devicemodels/' + model._id + '/edit"><i class="fa fa-pencil"></i> Edit</a>';
+  actions += '<form id="delete-form" action="/devicemodels/' + model._id + '/?_method=DELETE" method="POST" data-confirm="Delete device model ' + model.name + '? The audit log keeps the last copy."><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></form>';
+%>
+<div class="container">
+    <%- include('../partials/page-header', { title: model.name, subtitle: [model.vendor, model.type].filter(Boolean).join(' / '), breadcrumbs: [['Device models', '/devicemodels'], [model.name]], actions: actions }) %>
+    <div class="row">
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'Device model', rows: [
+                ['Model name', model.name], ['Vendor', model.vendor], ['Type', model.type],
+                ['sysObjectIDs', model.sysObjectIDs.length ? model.sysObjectIDs.map(function (oid) { return '<code class="app-mono">' + oid + '</code>'; }).join('<br>') : '', { raw: true }],
+                ['Notes', model.notes],
+            ] }) %>
+        </div>
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'Usage', rows: [
+                ['Devices', '<a href="/devices?search=' + encodeURIComponent(model.name) + '">' + (typeof deviceCount !== 'undefined' ? deviceCount : 0) + ' active device(s) with this model</a>', { raw: true }],
+                ['Created', h.dateTime(model.createdAt) + (model.author && model.author.email ? ' by ' + model.author.email : '')],
+                ['Last update', h.dateTime(model.lastUpdate)],
+            ] }) %>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

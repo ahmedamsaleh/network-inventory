@@ -1,0 +1,8 @@
+<% const s = sector || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Sector</strong></div>
+    <div class="panel-body">
+        <%- include('../partials/field', { name: 'sector[name]', label: 'Name', value: s.name, required: true, maxlength: 64, placeholder: 'e.g. North' }) %>
+        <%- include('../partials/field', { name: 'sector[description]', label: 'Description', value: s.description, maxlength: 255 }) %>
+    </div>
+</div>

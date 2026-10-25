@@ -1,42 +1,27 @@
 const express = require('express');
+const audit = require('../services/audit');
 const router = express.Router({ mergeParams: true });
 const Sector = require('../models/sector');
+const Device = require('../models/device');
 const middleware = require('../middleware');
 const seedDB = require('../seeds');
 const config = require('../config');
-let aSector = new Sector();
+const pagination = require('../services/pagination');
+const datasets = require('../services/datasets');
 
-//Mongoose PAGINATION
+// bootstrap-table server-side pagination: GET /sectors/pagination?limit&offset&search&sort&order
+// (also feeds the sector picker of the device forms, public/javascript/select2-texture.js)
 router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
-  let result;
-  try {
-    result = await Sector.paginate(
-      {},
-      { select: 'name', lean: true, limit: 500, offset: 0, customLabels: { totalDocs: 'total' } }
-    );
-  } catch (err) {
-    result = undefined;
-  }
-  response.setHeader('Content-Type', 'application/json');
-  response.send(JSON.stringify(result));
+  response.json(await pagination.paginatedResponse(request.query, datasets.sectors));
 });
-//INDEX - show all Sectors
-router.get('/', middleware.isLoggedIn, async function (request, response) {
-  let foundSectors;
-  try {
-    foundSectors = await Sector.find({});
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  response.render('sectors/index', { sectors: foundSectors });
+//INDEX - the sector list is loaded by the table from /sectors/pagination
+router.get('/', middleware.isLoggedIn, function (request, response) {
+  response.render('sectors/index');
 });
 
 //NEW - show form to create new Sector
-//should show the form will post data to /sectors
 router.get('/new', middleware.isLoggedIn, function (request, response) {
   if (config.seed) {
-    console.log('config.seed: ' + config.seed);
     seedDB(request.user);
   }
   response.render('sectors/new');
@@ -44,28 +29,18 @@ router.get('/new', middleware.isLoggedIn, function (request, response) {
 
 //CREATE - add new sector to DB
 router.post('/', middleware.isLoggedIn, async function (request, response) {
-  //get data from a form and add to sector array
-  const name = request.body.sector.name;
-  const description = request.body.sector.description;
-
-  aSector = {
-    name: name,
-    shortName: description,
-    author: { id: request.user._id, email: request.user.email },
-  };
-
-  console.log(aSector);
+  const fields = Sector.normalizeInput(request.body.sector || {});
   let createdSector;
   try {
-    createdSector = await Sector.create(aSector);
+    createdSector = await Sector.create(
+      Object.assign(fields, { author: { id: request.user._id, email: request.user.email } })
+    );
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong');
-    return;
+    // validation problems are user input: tell the user and return to the form
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/sectors/new');
   }
-  console.log('new Sector created and saved');
-  console.log(createdSector);
-  request.flash('success', 'Successfully added Sector');
+  request.flash('success', 'Successfully added sector ' + createdSector.name);
   response.redirect('/sectors');
 });
 
@@ -79,7 +54,12 @@ router.get('/:id', middleware.isLoggedIn, async function (request, response) {
     '/sectors'
   );
   if (!foundSector) return;
-  response.render('sectors/show', { sector: foundSector });
+  const deviceCount = await Device.countDocuments(
+    Device.activeFilter({
+      $or: [{ 'sector.id': foundSector._id }, { 'sector.name': foundSector.name }],
+    })
+  );
+  response.render('sectors/show', { sector: foundSector, deviceCount });
 });
 
 //EDIT SECTOR ROUTE
@@ -96,28 +76,34 @@ router.get('/:id/edit', async function (request, response) {
 });
 //UPDATE SECTOR ROUTE
 router.put('/:id', async function (request, response) {
-  //find and update the correct SECTOR
+  const fields = Sector.normalizeInput(request.body.sector || {});
   try {
-    await Sector.findByIdAndUpdate(request.params.id, request.body.sector);
+    const updated = await Sector.findByIdAndUpdate(request.params.id, fields, {
+      runValidators: true,
+      new: true,
+    });
+    if (!updated) {
+      request.flash('error', 'Sector not found');
+      return response.redirect('/sectors');
+    }
   } catch (error) {
-    console.log(error);
-    return response.redirect('/sectors');
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/sectors/' + request.params.id + '/edit');
   }
-  //redirect somewhere (show page)
+  request.flash('success', 'Sector updated');
   response.redirect('/sectors/' + request.params.id);
 });
 
 //DESTROY SECTOR ROUTE
 router.delete('/:id', async function (request, response) {
   if (request.params.id == -1) {
-    response.redirect('/sectors');
+    return response.redirect('/sectors');
   }
-
-  console.log('Deleting SECTOR with id: ' + request.params.id);
   try {
-    await Sector.findByIdAndDelete(request.params.id);
+    // the audit entry (with a snapshot) is written before the document is removed
+    await audit.deleteById(request, 'sector', Sector, request.params.id);
   } catch (error) {
-    console.log(error);
+    request.flash('error', 'Delete failed (nothing was removed): ' + error.message);
   }
   response.redirect('/sectors');
 });

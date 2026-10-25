@@ -71,6 +71,8 @@ const interfaceSchema = new mongoose.Schema({
   type: { type: String, default: '' }, // Local | WAN
   specialService: { type: String, default: '' }, // International | Cache | Bitstream | ...
   secondPOP: String,
+  // POP (shortName_cty) of the link partner, for interfaces on MSAN/GPON devices
+  parentPOP: { type: String, default: '' },
   secondHost: String,
   secondInterface: String,
   secondDeviceType: String,
@@ -222,6 +224,29 @@ interfaceSchema.methods.applyParsedAlias = function () {
   return this;
 };
 
+/** copies the owning device's descriptive fields onto the interface */
+interfaceSchema.methods.applyDevice = function (device) {
+  this.device = { id: device._id, hostname: device.hostname, ipaddress: device.ipaddress };
+  this.hostname = device.hostname;
+  this.ipaddress = device.ipaddress;
+  this.pop = device.pop || (device.popName && device.popName.name) || '';
+  this.devType = device.type || '';
+  this.devVendor = device.vendor || '';
+  this.devModel = device.model || '';
+  this.devPOP = device.pop || '';
+  this.devPOPLongName = device.popLongName || '';
+  this.devCabinet = device.cabinet || '';
+  this.devCty = device.cty || (device.county && device.county.name) || '';
+  this.devDistrict = device.district || '';
+  this.devSector = (device.sector && device.sector.name) || '';
+  this.devPOPType = device.popType || '';
+  this.btMSANCode = device.btMSANCode || '';
+  this.btMngIP = device.btMngIP || '';
+  this.btSector = device.btSector || '';
+  this.btDistrict = device.btDistrict || '';
+  return this;
+};
+
 /**
  * Field catalog used by the edit form (views/interfaces/edit.ejs), the PUT
  * handler (input coercion) and the list (views/interfaces/index.ejs).
@@ -248,6 +273,7 @@ interfaceSchema.statics.fieldCatalog = [
   { name: 'type', label: 'Type', group: 'Link', ...select(['', 'Local', 'WAN']) },
   { name: 'specialService', label: 'Special service', kind: 'text', group: 'Link' },
   { name: 'secondPOP', label: 'Second POP', kind: 'text', group: 'Link' },
+  { name: 'parentPOP', label: 'Parent POP (MSAN/GPON)', kind: 'text', group: 'Link' },
   { name: 'secondHost', label: 'Second host', kind: 'text', group: 'Link' },
   { name: 'secondInterface', label: 'Second interface', kind: 'text', group: 'Link' },
   { name: 'secondDeviceType', label: 'Second device type', kind: 'text', group: 'Link' },
@@ -287,8 +313,9 @@ interfaceSchema.statics.fieldCatalog = [
   })),
   { name: 'sp_speed', label: 'sp_speed (bit/s)', kind: 'number', group: 'Parsed alias' },
   // device
-  { name: 'hostname', label: 'Device hostname', kind: 'text', group: 'Device' },
-  { name: 'ipaddress', label: 'Device IP', kind: 'text', group: 'Device' },
+  // identity of the owning device: set by applyDevice(), never from a form
+  { name: 'hostname', label: 'Device hostname', kind: 'text', group: 'Device', readOnly: true },
+  { name: 'ipaddress', label: 'Device IP', kind: 'text', group: 'Device', readOnly: true },
   { name: 'pop', label: 'POP', kind: 'text', group: 'Device' },
   { name: 'devType', label: 'Device type', kind: 'text', group: 'Device' },
   { name: 'devVendor', label: 'Device vendor', kind: 'text', group: 'Device' },

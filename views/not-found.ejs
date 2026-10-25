@@ -1,8 +1,8 @@
-<%- include('partials/header') %>
+<%- include('partials/header', { pageTitle: 'Not found' }) %>
 <div class="container">
     <div class="row">
-        <div class="col-md-12 text-center" style="margin-top: 40px;">
-            <h1>Not found</h1>
+        <div class="col-md-6 col-md-offset-3 text-center" style="margin-top: 40px;">
+            <h1><i class="fa fa-question-circle text-muted"></i> Not found</h1>
             <p class="lead"><%= message %></p>
             <a href="<%= backUrl %>" class="btn btn-primary">Back to the list</a>
         </div>

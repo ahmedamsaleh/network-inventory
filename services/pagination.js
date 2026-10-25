@@ -3,6 +3,8 @@
  * pagination, queryParamsType "limit"): the client sends
  * ?limit=&offset=&search=&sort=&order= and expects { total, rows }.
  */
+const filters = require('./filters');
+
 const MAX_LIMIT = 500;
 const DEFAULT_LIMIT = 10;
 
@@ -62,9 +64,10 @@ async function paginate(Model, { filter = {}, projection, sort, limit, offset, m
  * @param {object} spec { Model, searchFields, sortable, defaultSort, projection, mapRow }
  */
 async function paginatedResponse(query, spec) {
-  const { limit, offset, search, sort } = parseQuery(query, spec);
+  const { limit, offset, sort } = parseQuery(query, spec);
   return paginate(spec.Model, {
-    filter: searchFilter(search, spec.searchFields),
+    // search + filter[...] criteria, shared with the exports (services/filters.js)
+    filter: filters.buildFilter(spec, query),
     projection: spec.projection,
     sort,
     limit,

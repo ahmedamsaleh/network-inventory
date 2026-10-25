@@ -1,0 +1,11 @@
+<%- include('../partials/header', { pageTitle: 'BT MSAN info' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'BT MSAN info', subtitle: 'reference data matched to devices by management IP', breadcrumbs: [['BT MSAN info']] }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add BT MSAN entry', href: '/btmsaninfos/new', cls: 'btn-primary', icon: 'fa-plus', id: 'btmsaninfo-add-form' },
+        { label: 'Edit entry', template: '/btmsaninfos/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'btmsaninfo-update-form' },
+        { label: 'Delete entry', template: '/btmsaninfos/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'btmsaninfo-delete-form', confirm: 'Delete the selected BT MSAN entry? The audit log keeps the last copy.' },
+    ] }) %>
+    <%- include('../partials/data-table', { url: '/btmsaninfos/pagination', columns: columns.btmsaninfos, sortName: 'msanCode' }) %>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,35 @@
+<%- include('../partials/header', { pageTitle: 'Decommission ' + device.hostname }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Decommission ' + device.hostname, subtitle: device.ipaddress, breadcrumbs: [['Devices', '/devices'], [device.hostname, '/devices/' + device._id], ['Decommission']] }) %>
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="alert alert-warning">
+                <p><i class="fa fa-exclamation-triangle"></i> You are about to decommission <strong><%= device.hostname %></strong> (<%= device.ipaddress %>).</p>
+                <ul>
+                    <li>the device disappears from the device list, the exports, the API and the synchronisation runs;</li>
+                    <li>its <strong><%= summary.interfaces %></strong> interface record(s) are archived (<%= summary.links %> link(s) still reference the hostname and are left as they are);</li>
+                    <li>an audit entry records who did it, when and why;</li>
+                    <li>an administrator can restore the device later; nothing is deleted permanently.</li>
+                </ul>
+            </div>
+            <%- include('../partials/details', { rows: [
+                ['Hostname', device.hostname], ['IP', device.ipaddress],
+                ['Type / model / vendor', [device.type, device.model, device.vendor].filter(Boolean).join(' / ')],
+                ['POP', [device.popName && device.popName.name, device.pop].filter(Boolean).join(' / ')],
+                ['Last sync', h.dateTime(device.lastSyncTime) || 'never'],
+                ['Interfaces', summary.interfaces + ' record(s), ' + summary.embedded + ' embedded'],
+            ] }) %>
+            <form id="decommission-form" action="/devices/<%= device._id %>/decommission" method="POST">
+                <%- include('../partials/field', { name: 'reason', label: 'Reason', id: 'reason', maxlength: 500, placeholder: 'e.g. replaced by ..., site closed, ...', help: 'Stored on the device and in the audit entry' }) %>
+                <div class="checkbox">
+                    <label><input type="checkbox" name="confirm" value="yes" required> I confirm that <strong><%= device.hostname %></strong> is to be decommissioned</label>
+                </div>
+                <div class="app-form-actions">
+                    <button class="btn btn-danger" type="submit"><i class="fa fa-power-off"></i> Decommission</button>
+                    <a class="btn btn-default" href="/devices/<%= device._id %>">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

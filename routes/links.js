@@ -1,61 +1,59 @@
 const express = require('express');
+const audit = require('../services/audit');
 const router = express.Router({ mergeParams: true });
 const Link = require('../models/link');
 const middleware = require('../middleware');
-let aLink = new Link();
 const seedDB = require('../seeds');
 const config = require('../config');
+const pagination = require('../services/pagination');
+const datasets = require('../services/datasets');
 
-//INDEX - show all pops
-router.get('/', middleware.isLoggedIn, async function (request, response) {
-  let foundLinks;
-  try {
-    foundLinks = await Link.find({});
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  response.render('links/index', { links: foundLinks });
+// bootstrap-table server-side pagination: GET /links/pagination?limit&offset&search&sort&order
+router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
+  response.json(await pagination.paginatedResponse(request.query, datasets.links));
+});
+//INDEX - the link list is loaded by the table from /links/pagination
+router.get('/', middleware.isLoggedIn, function (request, response) {
+  response.render('links/index');
 });
 
 //NEW - show form to create new Link
-//should show the form will post data to /links
 router.get('/new', middleware.isLoggedIn, function (request, response) {
   if (config.seed) {
-    console.log('config.seed: ' + config.seed);
     seedDB(request.user);
   }
-  response.render('links/new');
+  response.render('links/new', { types: Link.LINK_TYPES });
 });
+
+/** "not a number" speeds are reported like any other validation problem */
+function speedError(fields) {
+  return fields.speed !== undefined && fields.speed !== null && !Number.isFinite(fields.speed)
+    ? 'Speed must be a number of bit/s'
+    : null;
+}
 
 //CREATE - add new link to DB
 router.post('/', middleware.isLoggedIn, async function (request, response) {
-  //get data from a form and add to link array
-  const device1 = request.body.link.device1;
-  const interface1 = request.body.link.interface1;
-  const device2 = request.body.link.device2;
-  const interface2 = request.body.link.interface2;
-
-  aLink = {
-    device1: device1,
-    interface1: interface1,
-    device2: device2,
-    interface2: interface2,
-    author: { id: request.user._id, email: request.user.email },
-  };
-
-  console.log(aLink);
+  const fields = Link.normalizeInput(request.body.link || {});
+  const invalidSpeed = speedError(fields);
+  if (invalidSpeed) {
+    request.flash('error', invalidSpeed);
+    return response.redirect('/links/new');
+  }
   let createdLink;
   try {
-    createdLink = await Link.create(aLink);
+    createdLink = await Link.create(
+      Object.assign(fields, { author: { id: request.user._id, email: request.user.email } })
+    );
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong');
-    return;
+    // validation problems are user input: tell the user and return to the form
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/links/new');
   }
-  console.log('new link created and saved');
-  console.log(createdLink);
-  request.flash('success', 'Successfully added link');
+  request.flash(
+    'success',
+    'Successfully added link ' + createdLink.device1 + ' - ' + createdLink.device2
+  );
   response.redirect('/links');
 });
 //SHOW LINK ROUTE
@@ -81,32 +79,44 @@ router.get('/:id/edit', async function (request, response) {
     '/links'
   );
   if (!foundLink) return;
-  response.render('links/edit', { link: foundLink });
+  response.render('links/edit', { link: foundLink, types: Link.LINK_TYPES });
 });
 //UPDATE LINK ROUTE
 router.put('/:id', async function (request, response) {
-  //find and update the correct Link
-  try {
-    await Link.findByIdAndUpdate(request.params.id, request.body.link);
-  } catch (error) {
-    console.log(error);
-    return response.redirect('/links');
+  const fields = Link.normalizeInput(request.body.link || {});
+  const invalidSpeed = speedError(fields);
+  if (invalidSpeed) {
+    request.flash('error', invalidSpeed);
+    return response.redirect('/links/' + request.params.id + '/edit');
   }
-  //redirect somewhere (show page)
+  fields.lastUpdate = new Date();
+  try {
+    const updated = await Link.findByIdAndUpdate(request.params.id, fields, {
+      runValidators: true,
+      new: true,
+    });
+    if (!updated) {
+      request.flash('error', 'Link not found');
+      return response.redirect('/links');
+    }
+  } catch (error) {
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/links/' + request.params.id + '/edit');
+  }
+  request.flash('success', 'Link updated');
   response.redirect('/links/' + request.params.id);
 });
 
 //DESTROY LINK ROUTE
 router.delete('/:id', async function (request, response) {
   if (request.params.id == -1) {
-    response.redirect('/links');
+    return response.redirect('/links');
   }
-
-  console.log('Deleting link with id: ' + request.params.id);
   try {
-    await Link.findByIdAndDelete(request.params.id);
+    // the audit entry (with a snapshot) is written before the document is removed
+    await audit.deleteById(request, 'link', Link, request.params.id);
   } catch (error) {
-    console.log(error);
+    request.flash('error', 'Delete failed (nothing was removed): ' + error.message);
   }
   response.redirect('/links');
 });

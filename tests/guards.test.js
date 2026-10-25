@@ -150,7 +150,7 @@ describe('routes that are NOT guarded although they mutate/expose data (current 
   // Details are exercised per-resource; here we just pin the lack of a guard.
   test('edit forms of pops/sectors/counties/links/validatedusers are public', async () => {
     const { POP, Sector, County, Link, ValidatedUser } = app.models;
-    const pop = await POP.create({ name: 'GuardPop' });
+    const pop = await POP.create({ name: 'GuardPop', shortName: 'GRDP' });
     const sector = await Sector.create({ name: 'GuardSector' });
     const cty = await County.create({ name: 'GuardCty', acronym: 'GG' });
     const link = await Link.create({

@@ -1,56 +1,47 @@
 const express = require('express');
+const audit = require('../services/audit');
 const router = express.Router({ mergeParams: true });
-// let User  = require("../models/user");
 const ValidatedUser = require('../models/validatedUser');
+const User = require('../models/user');
 const middleware = require('../middleware');
 const seedDB = require('../seeds');
 const config = require('../config');
-let aValidatedUser = new ValidatedUser();
+const pagination = require('../services/pagination');
+const datasets = require('../services/datasets');
 
-//INDEX - show all Users
-router.get('/', middleware.isLoggedIn, async function (request, response) {
-  let foundUsers;
-  try {
-    foundUsers = await ValidatedUser.find({});
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  response.render('validatedusers/index', { users: foundUsers });
+// bootstrap-table server-side pagination
+router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
+  response.json(await pagination.paginatedResponse(request.query, datasets.validatedusers));
+});
+//INDEX - the list is loaded by the table from /validatedusers/pagination
+router.get('/', middleware.isLoggedIn, function (request, response) {
+  response.render('validatedusers/index');
 });
 
-//NEW - show form to create new User
-//should show the form will post data to /users
+//NEW - show form to whitelist a User
 router.get('/new', middleware.isLoggedIn, function (request, response) {
   if (config.seed) {
-    console.log('config.seed: ' + config.seed);
     seedDB(request.user);
   }
-  response.render('validatedusers/new');
+  response.render('validatedusers/new', { roles: ValidatedUser.ROLES });
 });
 //CREATE - add new User to the validation collection
 router.post('/', middleware.isLoggedIn, async function (request, response) {
-  //get data from a form and add to User array
-  const email = request.body.user.email;
-  const role = request.body.user.role;
-  const name = request.body.user.name;
-  // ValidatedUser
-  aValidatedUser = {
-    name: name,
-    email: email,
-    role: role,
-    author: { id: request.user._id, email: request.user.email },
-  };
-
+  const fields = ValidatedUser.normalizeInput(request.body.user || {});
   try {
-    await ValidatedUser.create(aValidatedUser);
+    if (fields.email && (await ValidatedUser.findOne({ email: fields.email }))) {
+      request.flash('error', fields.email + ' is already on the list of validated users');
+      return response.redirect('/validatedusers/new');
+    }
+    await ValidatedUser.create(
+      Object.assign(fields, { author: { id: request.user._id, email: request.user.email } })
+    );
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong');
-    return;
+    // validation problems are user input: tell the user and return to the form
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/validatedusers/new');
   }
-  console.log('new User created in the validation collection and saved');
-  request.flash('success', 'Successfully added User to list of validated users');
+  request.flash('success', 'Successfully added ' + fields.email + ' to the validated users');
   response.redirect('/validatedusers');
 });
 
@@ -64,7 +55,8 @@ router.get('/:id', middleware.isLoggedIn, async function (request, response) {
     '/validatedusers'
   );
   if (!foundUser) return;
-  response.render('validatedusers/show', { user: foundUser });
+  const account = await User.findOne({ email: foundUser.email }, { isAuthenticated: 1 }).lean();
+  response.render('validatedusers/show', { user: foundUser, account });
 });
 
 //EDIT VALIDATED USER ROUTE
@@ -77,32 +69,38 @@ router.get('/:id/edit', async function (request, response) {
     '/validatedusers'
   );
   if (!foundUser) return;
-  response.render('validatedusers/edit', { user: foundUser });
+  response.render('validatedusers/edit', { user: foundUser, roles: ValidatedUser.ROLES });
 });
 //UPDATE VALIDATED USER ROUTE
 router.put('/:id', async function (request, response) {
-  //find and update the correct VALIDATED USER
+  const fields = ValidatedUser.normalizeInput(request.body.user || {});
   try {
-    await ValidatedUser.findByIdAndUpdate(request.params.id, request.body.user);
+    const updated = await ValidatedUser.findByIdAndUpdate(request.params.id, fields, {
+      runValidators: true,
+      new: true,
+    });
+    if (!updated) {
+      request.flash('error', 'Validated user not found');
+      return response.redirect('/validatedusers');
+    }
   } catch (error) {
-    console.log(error);
-    return response.redirect('/validatedusers');
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/validatedusers/' + request.params.id + '/edit');
   }
-  //redirect somewhere (show page)
+  request.flash('success', 'Validated user updated');
   response.redirect('/validatedusers/' + request.params.id);
 });
 
 //DESTROY VALIDATED USER ROUTE
 router.delete('/:id', async function (request, response) {
   if (request.params.id == -1) {
-    response.redirect('/validatedusers');
+    return response.redirect('/validatedusers');
   }
-
-  console.log('Deleting Validated User with id: ' + request.params.id);
   try {
-    await ValidatedUser.findByIdAndDelete(request.params.id);
+    // the audit entry (with a snapshot) is written before the document is removed
+    await audit.deleteById(request, 'validateduser', ValidatedUser, request.params.id);
   } catch (error) {
-    console.log(error);
+    request.flash('error', 'Delete failed (nothing was removed): ' + error.message);
   }
   response.redirect('/validatedusers');
 });

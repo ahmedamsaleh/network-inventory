@@ -1,89 +1,132 @@
-<%- include('partials/header') %>
-	<div class="container">
-		<header class="jumbotron">
-		    <div class="container">
-    			<h1><i class="fa fa-database" aria-hidden="true"></i>  Network Inventory</h1>
-    			<p>View Network Information</p>
-		    </div>
-		</header>
-        <div class="row text-center">
-            <div class="container">
-                <div class="jumbotron">
-                    <div class="btn-group" role="group" aria-label="sync-data">
-                            <a href="/devices/sync"><button type="button" id="device-sync" class="btn  btn-info btn-lg">Synchronize Devices</button></a>
-                            <!--<a href="#"><button type="button " class="btn  btn-info btn-lg">Create Interface Links</button></a>-->
-                    </div>        
-                    <div class="btn-group" role="group" aria-label="import-data">
-                            <a href="/enrichments/new"><button type="button " class="btn  btn-info btn-lg">Import Enrichment Data</button></a>
-                            <a href="/enrichments/export"><button type="button " class="btn  btn-info btn-lg">Export Enrichment Data</button></a>
-                            <!--<a href="/links/new"><button type="button " class="btn  btn-info btn-lg">Import Links Data</button></a>-->
-                    </div>
-                </div>
-                
+<%- include('partials/header', { pageTitle: 'Dashboard' }) %>
+<%
+  const d = dashboard;
+  const t = d.totals;
+  const running = d.sync.running;
+  const last = d.sync.lastRun;
+  const imp = d.importStatus;
+  const stat = (value, label, href, icon, cls) => '<a class="app-stat ' + (cls || '') + '" href="' + href + '"><i class="fa ' + icon + '"></i><div class="app-stat-value">' + h.number(value) + '</div><div class="app-stat-label">' + label + '</div></a>';
+%>
+<div class="container">
+    <%- include('partials/page-header', { title: 'Dashboard', subtitle: 'network inventory at a glance',
+        actions: '<a class="btn btn-primary" href="/devices/new"><i class="fa fa-plus"></i> Add device</a><a class="btn btn-info" id="device-sync" href="/devices/sync"><i class="fa fa-refresh"></i> Synchronize devices</a>' }) %>
+
+    <h3 class="app-section-title"><i class="fa fa-sitemap"></i> Inventory</h3>
+    <div class="row">
+        <div class="col-sm-3 col-xs-6"><%- stat(t.devices, 'Active devices', '/devices', 'fa-server') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.interfaces, 'Interfaces', '/interfaces', 'fa-plug') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.links, 'Links', '/links', 'fa-exchange') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.pops, 'POPs', '/pops', 'fa-building') %></div>
+    </div>
+    <div class="row">
+        <div class="col-sm-3 col-xs-6"><%- stat(t.cabinets, 'Cabinets', '/cabinets', 'fa-archive') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.devicemodels, 'Device models', '/devicemodels', 'fa-cubes') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.btmsaninfos, 'BT MSAN entries', '/btmsaninfos', 'fa-list-alt') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.decommissioned, 'Decommissioned devices', '/devices/decommissioned', 'fa-power-off') %></div>
+    </div>
+
+    <h3 class="app-section-title"><i class="fa fa-refresh"></i> Synchronisation</h3>
+    <div class="row">
+        <div class="col-sm-3 col-xs-6"><%- stat(t.discovered, 'Discovered devices', '/devices?filter[discovered]=true', 'fa-check-circle') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.neverSynced, 'Never synchronised', '/devices?filter[lastSyncTime][empty]=1', 'fa-clock-o') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.withErrors, 'Last sync failed', '/devices?filter[lastSyncError][empty]=0', 'fa-exclamation-triangle') %></div>
+        <div class="col-sm-3 col-xs-6"><%- stat(t.slow, 'Known slow (short SNMP timeout)', '/devices?filter[snmpSlow]=true', 'fa-hourglass-half') %></div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Sync runs</strong></div>
+                <table class="table table-condensed app-details">
+                    <tbody>
+                        <tr><th>Current run</th><td><% if (running) { %><span class="label label-warning">running</span> since <%= h.dateTime(running.startedAt) %>, <%= running.total %> device(s)<% } else { %><span class="text-muted">none</span><% } %></td></tr>
+                        <tr><th>Last run</th><td><% if (last) { %><span class="label <%= last.failed ? 'label-warning' : 'label-success' %>"><%= last.ok %> ok / <%= last.failed %> failed</span> of <%= last.total %>, finished <%= h.dateTime(last.finishedAt) %> (<%= h.number(last.durationMs) %> ms)<% if (last.error) { %> &ndash; <span class="text-danger"><%= last.error %></span><% } %><% } else { %><span class="text-muted">no run since the server started</span><% } %></td></tr>
+                        <tr><th>Interfaces flagged for deletion</th><td><a href="/interfaces?filter[delete]=true"><%= h.number(t.flagged) %></a> (missed more than the configured number of sync cycles)</td></tr>
+                        <tr><th>Slow profile</th><td>after <%= d.slowAfterTimeouts %> consecutive timeouts, or when flagged on the device</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Device import</strong> <a class="pull-right" href="/enrichments/import">import page</a></div>
+                <table class="table table-condensed app-details">
+                    <tbody>
+                        <tr><th>Current import</th><td><% if (imp.running) { %><span class="label label-warning">running</span> <%= imp.running.file %>: <%= h.number(imp.running.total) %> row(s) read so far<% } else { %><span class="text-muted">none</span><% } %></td></tr>
+                        <tr><th>Last import</th><td><% if (imp.lastImport) { %><span class="label <%= imp.lastImport.status === 'done' ? 'label-success' : 'label-danger' %>"><%= imp.lastImport.status %></span> <%= imp.lastImport.file %>: <%= h.number(imp.lastImport.inserted) %> inserted, <%= h.number(imp.lastImport.updated) %> updated, <%= h.number(imp.lastImport.failed) %> failed of <%= h.number(imp.lastImport.total) %><% } else { %><span class="text-muted">none since the server started</span><% } %></td></tr>
+                        <tr><th>Enrichment table</th><td><a href="/enrichments"><%= h.number(t.enrichments) %> row(s)</a></td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <!--<adding flex style to fix issue related to left alignment>-->
-        <div class="row text-center" style="display:flex; flex-wrap:wrap;">
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/devices/" class="btn btn-primary">Go To Devices</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/interfaces/" class="btn btn-primary">Go To Interfaces</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/links/" class="btn btn-primary">Go To Links</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/pops/" class="btn btn-primary">Go To POPs</a>
-                </div>
-            </div>
-            <!--<div class="col-md-4 col-sm-6">-->
-            <!--    <div class="thumbnail">-->
-            <!--        <img src="/images/router.png">-->
-            <!--        <a href="/interfaces/" class="btn btn-primary">Go To Interfaces</a>-->
-            <!--    </div>-->
-            <!--</div>-->
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/sectors/" class="btn btn-primary">Go To Sectors</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/counties/" class="btn btn-primary">Go To Counties</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/validatedusers/" class="btn btn-primary">Go To Validated Users</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/users/" class="btn btn-primary">Go To Users</a>
-                </div>
-            </div>
-            <div class="col-md-4 col-sm-6">
-                <div class="thumbnail">
-                    <img src="/images/router.png">
-                    <a href="/enrichments/" class="btn btn-primary">Go To Enrichment</a>
-                </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Recently synchronised</strong></div>
+                <table class="table table-condensed table-hover">
+                    <thead><tr><th>Device</th><th>Vendor</th><th>Last sync</th><th>Profile</th><th>Result</th></tr></thead>
+                    <tbody>
+                    <% if (!d.recentlySynced.length) { %><tr><td colspan="5" class="text-muted">no device has been synchronised yet</td></tr><% } %>
+                    <% d.recentlySynced.forEach(function (device) { %>
+                        <tr>
+                            <td><a href="/devices/<%= device._id %>"><%= device.hostname %></a></td>
+                            <td><%= h.text(device.vendor, '') %></td>
+                            <td><%= h.dateTime(device.lastSyncTime) %></td>
+                            <td><span class="label <%= device.snmpProfile === 'slow' ? 'label-warning' : 'label-default' %>"><%= device.snmpProfile %></span></td>
+                            <td><% if (device.lastSyncError) { %><span class="text-danger" title="<%= device.lastSyncError %>"><i class="fa fa-times"></i> <%= device.lastSyncError.slice(0, 40) %></span><% } else { %><span class="text-success"><i class="fa fa-check"></i> ok</span><% } %></td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
             </div>
         </div>
-	</div>
+    </div>
+
+    <h3 class="app-section-title"><i class="fa fa-pie-chart"></i> Active devices by</h3>
+    <div class="row">
+        <% [['Vendor', d.byVendor, 'vendor'], ['Type', d.byType, 'type'], ['County', d.byCty, 'cty']].forEach(function (group) { %>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong><%= group[0] %></strong></div>
+                <table class="table table-condensed table-hover">
+                    <tbody>
+                    <% if (!group[1].length) { %><tr><td class="text-muted">no devices</td></tr><% } %>
+                    <% group[1].forEach(function (row) { %>
+                        <tr>
+                            <td><% if (row.value === '(blank)') { %><span class="text-muted">(blank)</span><% } else { %><a href="/devices?filter[<%= group[2] %>]=<%= encodeURIComponent(row.value) %>"><%= row.value %></a><% } %></td>
+                            <td class="text-right"><%= h.number(row.count) %></td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <% }); %>
+    </div>
+
+    <h3 class="app-section-title"><i class="fa fa-history"></i> Recent activity <small><a href="/audit">full audit log</a></small></h3>
+    <div class="panel panel-default">
+        <table class="table table-condensed table-hover">
+            <thead><tr><th>When</th><th>Action</th><th>User</th><th>Target</th><th>Reason</th></tr></thead>
+            <tbody>
+            <% if (!d.recentAudit.length) { %><tr><td colspan="5" class="text-muted">nothing has been decommissioned, restored or deleted yet</td></tr><% } %>
+            <% d.recentAudit.forEach(function (entry) { %>
+                <tr>
+                    <td><%= h.dateTime(entry.at) %></td>
+                    <td><a href="/audit/<%= entry._id %>"><%= entry.action %></a></td>
+                    <td><%= entry.user && entry.user.email %></td>
+                    <td><% if (entry.target && entry.target.type === 'device' && entry.target.id) { %><a href="/devices/<%= entry.target.id %>"><%= entry.target.label %></a><% } else { %><%= entry.target && entry.target.type %> <%= entry.target && entry.target.label %><% } %></td>
+                    <td><%= entry.details && entry.details.reason %></td>
+                </tr>
+            <% }); %>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="app-section-title"><i class="fa fa-bolt"></i> Quick actions</h3>
+    <div class="app-quick-actions">
+        <a class="btn btn-default" href="/enrichments/import"><i class="fa fa-upload"></i> Import devices (CSV/XLSX)</a>
+        <a class="btn btn-default" href="/enrichments/new"><i class="fa fa-upload"></i> Import enrichment data</a>
+        <a class="btn btn-default" href="/enrichments/export"><i class="fa fa-download"></i> Export data</a>
+        <a class="btn btn-default" href="/enrichments/check/secondpop"><i class="fa fa-check"></i> secondPOP check</a>
+        <a class="btn btn-default" href="/pops"><i class="fa fa-building"></i> Import the POPs sheet</a>
+        <a class="btn btn-default" href="/validatedusers/new"><i class="fa fa-user-plus"></i> Whitelist a user</a>
+    </div>
+</div>
 <%- include('partials/footer') %>

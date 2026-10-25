@@ -1,63 +1,12 @@
-<%- include('../partials/header') %>
-    <!--< the class container will give space around our contents>-->
-
-    <div class="container">
-        <header class="jumbotron">
-            <!--<adding second container to keep spacing around contents when we resize the page>-->
-            <div class="container">
-                <h1>Network Inventory</h1>
-                <p>View Interfaces Information</p>
-                <div class="btn-group" role="group" aria-label="all">
-                    <a href="/devices/"><button type="button" class="btn btn-default ">All Devices</button></a>
-                    <a href="/pops/"><button type="button" class="btn btn-default ">All POPs</button></a>
-                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
-                    <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
-                    <a href="/counties/"><button type="button" class="btn btn-default ">All Counties</button></a>
-                    <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
-                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
-                    <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
-                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
-                    <a href="/interfaces/"><button type="button" class="btn btn-default active">All Interfaces Data</button></a>
-                </div>        
-            </div>
-        </header>
-
-        <div class="row text-left" >
-            <div class="table-responsive">
-                <%
-                  // columns: every field of Interface.fieldCatalog; only the common ones are visible by default
-                  const visibleByDefault = ['ifIndex', 'ifName', 'hostname', 'ifAlias', 'ifDescr', 'type', 'specialService', 'ifSpeedText', 'speedCat', 'secondHost', 'isUpLink', 'lastSyncTime'];
-                  const formatters = { createdAt: 'dateFormatter', lastUpdate: 'dateFormatter', lastSyncTime: 'dateFormatter', ifName: 'interfaceLinkFormatter' };
-                %>
-                <table id="eventsTable" data-toggle="table" data-url="/interfaces/pagination" data-side-pagination="server" data-query-params-type="limit"
-                data-pagination="true" data-page-size="10" data-page-list="[10, 25, 50, 100, 500]" data-search="true"
-                data-height="525" data-maintain-selected="true" data-show-refresh="true" data-show-toggle="true"
-                data-show-columns="true" data-toolbar="#toolbar" data-single-select="true" data-sort-name="hostname" data-sort-order="asc">
-                    <thead>
-                        <tr>
-                                <th data-field="_id" data-visible="false">ID</th>
-                                <% fields.forEach(function (field) { %>
-                                <th data-field="<%= field.name %>" data-sortable="true" data-visible="<%= visibleByDefault.includes(field.name) %>" <%- formatters[field.name] ? 'data-formatter="' + formatters[field.name] + '"' : '' %>><%= field.label %></th>
-                                <% }); %>
-                                <th data-field="createdBy" data-visible="false">Created By</th>
-                                <th data-field="updatedBy" data-visible="false">Last Updated By</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-        </div>
-    </div>
-<script type="text/javascript">
-    function escapeHtml(value) {
-        return String(value === undefined || value === null ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    // bootstrap-table cell formatters (rows come from GET /interfaces/pagination)
-    function interfaceLinkFormatter(value, row) {
-        return '<a href="/interfaces/' + row._id + '/edit">' + escapeHtml(value) + '</a>';
-    }
-    function dateFormatter(value) {
-        return value ? new Date(value).toDateString() : '';
-    }
-</script>
+<%- include('../partials/header', { pageTitle: 'Interfaces' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Interfaces', subtitle: 'every field of the interface catalogue is available through the column picker', breadcrumbs: [['Interfaces']],
+        actions: '<a class="btn btn-default" href="/enrichments/export"><i class="fa fa-download"></i> Export</a><a class="btn btn-default" href="/enrichments/check/secondpop"><i class="fa fa-check"></i> secondPOP check</a>' }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Edit interface', template: '/interfaces/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'interface-update-form' },
+        { label: 'Delete interface', template: '/interfaces/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'interface-delete-form', confirm: 'Delete the selected interface? The audit log keeps the last copy.' },
+    ] }) %>
+    <p class="text-muted"><i class="fa fa-info-circle"></i> Interfaces are discovered by the SNMP sync; to add one by hand open the device page and use <em>Add interface</em>.</p>
+    <%- include('../partials/data-table', { url: '/interfaces/pagination', columns: columns.interfaces, sortName: 'hostname' }) %>
+</div>
 <%- include('../partials/footer') %>

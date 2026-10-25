@@ -1,40 +1,18 @@
-<%- include('../partials/header') %>
+<%- include('../partials/header', { pageTitle: user.name || user.email }) %>
+<%
+  let actions = '';
+  if (isAdmin) actions += '<a class="btn btn-warning" href="/users/' + user._id + '/edit"><i class="fa fa-pencil"></i> Edit</a>';
+  actions += '<form id="delete-form" action="/users/' + user._id + '/?_method=DELETE" method="POST" data-confirm="Delete the account ' + user.email + '? The audit log keeps the last copy."><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></form>';
+%>
 <div class="container">
-    <div class="row">
-        <div class="col-md-3">
-            <p class="lead">Network Inventory</p>
-            <div class="list-group">
-                <a href="/devices/"><li class="list-group-item" href="/devices">All Devices</li></a>
-                <a href="/pops/"><li class="list-group-item">All POPs</li></a>
-                <a href="/counties/"><li class="list-group-item " href="/counties">All Counties</li></a>
-                <a href="/sectors/"><li class="list-group-item">All Sectors</li></a>
-                <a href="/links/"><li class="list-group-item">All Links</li></a>
-                <a href="/users/"><li class="list-group-item active">All Users</li></a>
-            </div>
-        </div>
-        
-        <div class="col-md-9">
-            <h1><%= user.name  %></h1>
-            <div class="thumbnail">
-                <div class="caption-full">
-                    <h4 class="pull-right">Name: <%= user.role  %></h4>
-                    <h4><a href="/users/<%= user._id %>"><%= user.name  %></a></h4>
-                    <h4>E-mail: <%= user.email  %></h4>
-                    <% if(user.author.email == undefined){ %>
-                        <p><em>Added By: admin imported</em></p>
-                    <% } else { %>
-                        <p><em>Added By:  <%= user.author.email %></em></p>
-                    <% } %>
-                    
-                    <% if(currentUser && user.author.id && user.author.id.equals(currentUser._id)){ %> 
-                        <a class="btn btn-warning" href="/users/<%= user._id %>/edit">Edit</a>
-                        <form id="delete-form" action="/users/<%= user._id %>/?_method=DELETE" method="POST">
-                            <button class="btn btn-danger">Delete</button>
-                        </form>
-                    <% } %>
-                </div>
-            </div>
-        </div>
-    </div>
+    <%- include('../partials/page-header', { title: user.name || user.email, subtitle: user.email, breadcrumbs: [['Users', '/users'], [user.name || user.email]], actions: actions }) %>
+    <div class="row"><div class="col-md-8 col-md-offset-2">
+        <%- include('../partials/details', { title: 'Account', rows: [
+            ['Name', user.name], ['E-mail', user.email],
+            ['Role', '<span class="label ' + (user.role === 'admin' ? 'label-primary' : 'label-default') + ' label-lg">' + user.role + '</span>', { raw: true }],
+            ['E-mail verified', '<span class="label ' + (user.isAuthenticated ? 'label-success' : 'label-warning') + ' label-lg">' + (user.isAuthenticated ? 'yes' : 'not yet') + '</span>', { raw: true }],
+        ] }) %>
+        <% if (currentUser && String(currentUser._id) === String(user._id)) { %><p class="text-muted"><i class="fa fa-info-circle"></i> This is your account.</p><% } %>
+    </div></div>
 </div>
 <%- include('../partials/footer') %>

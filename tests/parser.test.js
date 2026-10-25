@@ -340,7 +340,7 @@ describe('linkInfoFromLink', () => {
       label: 'Link to CORP-RCJ1-COR-01 ge-0/0/1',
       specialService: '',
     });
-    const fromOtherSide = linkInfoFromLink(link, 'corp-rcj1-cor-01');
+    const fromOtherSide = linkInfoFromLink(link, 'wikp-rcj1wik-01');
     expect(fromOtherSide.secondHost).toBe('DUBP-RCJ1-DUB-01');
     expect(fromOtherSide.secondInterface).toBe('ge-0/0/0');
   });
@@ -381,6 +381,7 @@ describe('parseHostname', () => {
       deviceVendor: undefined, // 4th char is "1"
     });
     expect(parseHostname('DUBP-RCJ1-DUB-01').popName).toBe('DUBP'); // default lookups
+    expect(parseHostname('auto-r38j-wik-ir').deviceVendor).toBe('Juniper'); // codes are case-insensitive
     expect(parseHostname('router-001')).toBeNull();
     expect(parseHostname('A-B-C-D-E')).toBeNull();
     expect(parseHostname('A-TOOLONG-C-D')).toBeNull();

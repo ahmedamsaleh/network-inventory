@@ -8,7 +8,7 @@
  *  - The POST handler expects the pop/sector/county *ids* inside the
  *    `[name]` form fields (select2 workaround) and resolves them to names.
  *  - Validation failures (duplicate hostname/IP, short hostname, invalid
- *    IP) flash an error but still redirect 302 to /devices.
+ *    IP) flash an error and redirect 302 back to the form (/devices/new).
  *  - POST /devices without type/model/vendor never answers (undefined.trim()
  *    crashes in a Mongoose callback).
  *  - PUT /devices/:id responds with the redirect *before* the update has
@@ -117,7 +117,7 @@ describe('Device CRUD (authenticated)', () => {
       .type('form')
       .send(deviceForm({ 'device[ipaddress]': '10.1.2.99' }))
       .expect(302)
-      .expect('location', '/devices');
+      .expect('location', '/devices/new');
     expect(await app.models.Device.countDocuments({})).toBe(1);
   });
 
@@ -127,7 +127,7 @@ describe('Device CRUD (authenticated)', () => {
       .type('form')
       .send(deviceForm({ 'device[hostname]': 'router-002' }))
       .expect(302)
-      .expect('location', '/devices');
+      .expect('location', '/devices/new');
     expect(await app.models.Device.countDocuments({})).toBe(1);
   });
 
@@ -137,7 +137,7 @@ describe('Device CRUD (authenticated)', () => {
       .type('form')
       .send(deviceForm({ 'device[hostname]': 'abc', 'device[ipaddress]': '10.9.9.9' }))
       .expect(302)
-      .expect('location', '/devices');
+      .expect('location', '/devices/new');
     expect(await app.models.Device.countDocuments({})).toBe(1);
   });
 
@@ -147,7 +147,7 @@ describe('Device CRUD (authenticated)', () => {
       .type('form')
       .send(deviceForm({ 'device[hostname]': 'router-003', 'device[ipaddress]': 'not-an-ip' }))
       .expect(302)
-      .expect('location', '/devices');
+      .expect('location', '/devices/new');
     expect(await app.models.Device.countDocuments({})).toBe(1);
   });
 

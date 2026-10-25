@@ -1,205 +1,52 @@
+/* select2 pickers of the device forms (POP / sector / county), fed by the
+ * pagination endpoints ({ total, rows }; rows carry id + name). The lists are
+ * only fetched on pages that have the pickers. */
 var $j = jQuery.noConflict();
+$j(document).ready(function () {
+  $j.fn.select2.defaults.set('theme', 'bootstrap');
 
+  function picker(selector, url) {
+    var $elements = $j(selector);
+    if (!$elements.length) return;
+    $j.getJSON(url).done(function (data) {
+      var items = $j.map(data.rows || [], function (row) {
+        return { id: row._id || row.id, text: row.name || row.text };
+      });
+      $elements.each(function () {
+        var $element = $j(this);
+        var current = $element.val();
+        var currentText = $element.attr('data-init-text');
+        // keep the stored value selectable even when it is not in the list any more
+        if (current && !items.some(function (item) { return item.id === current; })) {
+          items.unshift({ id: current, text: currentText || current });
+        }
+        $element.select2({
+          placeholder: 'choose...',
+          allowClear: true,
+          selectOnClose: true,
+          data: items,
+          theme: 'bootstrap',
+          width: null,
+          minimumInputLength: 0,
+        });
+        if (current) $element.val(current).trigger('change');
+      });
+    });
+  }
 
-$j(document).ready(function() {
-var nodesocket;
-	var IP = "" ;//= nodesocket.ip;//"127.0.0.1";
-	var PORT = "";// = nodesocket.port;//"8080";
-	var socket = "";
-		var pops_pagination_url = "";//"http://"+socket+"/pops/pagination";
-		var sectors_pagination_url = "";//"http://"+socket+"/sectors/pagination";
-		var counties_pagination_url = "";//"http://"+socket+"/counties/pagination";
-	$j.get('/getenv', function(data) {
-	    nodesocket = data;
-	    console.log(nodesocket);
-		 IP = nodesocket.ip;//"127.0.0.1";
-		 PORT = nodesocket.port;//"8080";
-		 socket = IP +":"+ PORT;
-		 pops_pagination_url = "http://"+socket+"/pops/pagination?limit=500";
-		 sectors_pagination_url = "http://"+socket+"/sectors/pagination";
-		 counties_pagination_url = "http://"+socket+"/counties/pagination";
+  picker('#device-pop-name, #new-device-pop-name', '/pops/pagination?limit=500&sort=name');
+  picker('#device-sector-name, #new-device-sector-name', '/sectors/pagination?limit=500&sort=name');
+  picker('#device-county-name, #new-device-county-name', '/counties/pagination?limit=500&sort=name');
 
+  $j('#device-type').select2({ placeholder: 'Search', theme: 'bootstrap', width: null });
 
-		$j.ajax({
-		  url: pops_pagination_url,//"http://127.0.0.1:8080/pops/pagination",//
-		  beforeSend: function( xhr ) {
-		    xhr.overrideMimeType( "text/plain; charset=x-user-defined" );
-		  }
-		}).done(function( data ) {
-		    if ( console && console.log ) {
-		        popsData = JSON.parse(data)["rows"];
-		        console.log(popsData);
-				mappedPopsData = $j.map(popsData, function (obj) {
-				obj.text = obj.text || obj.name; // replace name with the property used for the text
-				return obj;
-				});
-
-				$j("#device-pop-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedPopsData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1,
-					initSelection: function(element, callback) {
-						callback({ id: element.val(), text: element.attr('data-init-text') 
-						});
-					}
-				});
-				$j("#new-device-pop-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedPopsData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1
-				});
-
-		    }
-		});
-
-		$j.ajax({
-		  url: sectors_pagination_url,//"http://127.0.0.1:8080/sectors/pagination",//
-		  beforeSend: function( xhr ) {
-		    xhr.overrideMimeType( "text/plain; charset=x-user-defined" );
-		  }
-		}).done(function( data ) {
-		    // if ( console && console.log ) {
-		        sectorsData = JSON.parse(data)["docs"];
-		        console.log(sectorsData);
-				mappedSectorsData = $j.map(sectorsData, function (obj) {
-				obj.text = obj.text || obj.name; // replace name with the property used for the text
-				return obj;
-				});
-
-				$j("#device-sector-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedSectorsData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1,
-					initSelection: function(element, callback) {
-						callback({ id: element.val(), text: element.attr('data-init-text') 
-						});
-					}
-				});
-				$j("#new-device-sector-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedSectorsData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1
-
-				});
-		});
-
-		$j.ajax({
-		  url: counties_pagination_url,//"http://127.0.0.1:8080/counties/pagination",
-		  beforeSend: function( xhr ) {
-		    xhr.overrideMimeType( "text/plain; charset=x-user-defined" );
-		  }
-		}).done(function( data ) {
-		    if ( console && console.log ) {
-		        countiesData = JSON.parse(data)["docs"];
-		        console.log(countiesData);
-				mappedCountiesData = $j.map(countiesData, function (obj) {
-				obj.text = obj.text || obj.name; // replace name with the property used for the text
-				return obj;
-				});
-
-				$j("#device-county-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedCountiesData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1,
-					initSelection: function(element, callback) {
-						callback({ id: element.val(), text: element.attr('data-init-text') 
-						});
-					}
-				});
-				$j("#new-device-county-name").select2({
-					placeholder: 'type something...',
-					selectOnClose: true,
-					data: mappedCountiesData,
-			        theme: "bootstrap",
-			        width: null,
-			        containerCssClass: ':all:',
-					minimumInputLength: 1,
-				});
-		    }
-		});
-
-
-	});
-
-		 
-		// var pops_pagination_url = "http://"+socket+"/pops/pagination?limit=500";
-		// var sectors_pagination_url = "http://"+socket+"/sectors/pagination";
-		// var counties_pagination_url = "http://"+socket+"/counties/pagination";
-	$j.fn.select2.defaults.set( "theme", "bootstrap" );
-	// var $jeventSelect = $j("#device-pop-name");
-	// var $jeventSelect = $j("#device-sector-name");
-	// var $jeventSelect = $j("#device-county-name");
-
-
-  
-	var popsData = [];
-	var mappedPopsData = [];
-	var sectorsData = [];
-	var mappedSectorsData = [];
-	var countiesData = [];
-	var mappedCountiesData = [];
-	
-	$j("#interface-link-type").on("change", function (e) { 
-		var select = this.value;
-		if ($j(this).val().toLowerCase() == 'international') {
-			console.log(select); 
-        	$j('#provider').show();
-        	$j('#service').show();
-        	$j('#linkID').show();
-        	$j('#subCable').show();
-        	$j('#teCID').show();
-        	$j('#termination').show();
-    	}
-	    else{
-	    	$j('#provider').hide(); // hide div if value is not "international"
-        	$j('#service').hide();
-        	$j('#linkID').hide();
-        	$j('#subCable').hide();
-        	$j('#teCID').hide();
-        	$j('#termination').hide();
-	    } 
-	});
-
-	$j("#interface-link-type").select2({
-		placeholder: "Search",
-		theme: "bootstrap",
-		initSelection: function(element, callback) {
-			callback({ id: element.val(), text: element.attr('data-init-text') 
-			});
-		}
-	});
-
-	$j("#device-type").select2({
-		placeholder: "Search",
-		theme: "bootstrap",
-		initSelection: function(element, callback) {
-			callback({ id: element.val(), text: element.attr('data-init-text') 
-			});
-		}
-	});
-
-
-
-
-
+  // interface edit form: the international details only make sense for international links
+  function toggleInternational() {
+    var $type = $j('#interface-linkType');
+    if (!$type.length) return;
+    var international = String($type.val() || '').toLowerCase() === 'international';
+    $j('.app-international').toggle(international);
+  }
+  $j('#interface-linkType').on('change', toggleInternational);
+  toggleInternational();
 });

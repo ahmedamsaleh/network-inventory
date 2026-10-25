@@ -1,0 +1,12 @@
+<%- include('../partials/header', { pageTitle: 'Cabinets' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Cabinets', subtitle: 'first hostname segment -> POP', breadcrumbs: [['Cabinets']],
+        actions: '<a class="btn btn-default" href="/pops"><i class="fa fa-building"></i> POPs</a>' }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add cabinet', href: '/cabinets/new', cls: 'btn-primary', icon: 'fa-plus', id: 'cabinet-add-form' },
+        { label: 'Edit cabinet', template: '/cabinets/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'cabinet-update-form' },
+        { label: 'Delete cabinet', template: '/cabinets/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'cabinet-delete-form', confirm: 'Delete the selected cabinet? The audit log keeps the last copy.' },
+    ] }) %>
+    <%- include('../partials/data-table', { url: '/cabinets/pagination', columns: columns.cabinets, sortName: 'cabinet' }) %>
+</div>
+<%- include('../partials/footer') %>

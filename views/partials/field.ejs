@@ -1,0 +1,49 @@
+<%#
+  One labelled form control.
+    name        input name (e.g. "device[hostname]")
+    label       text
+    value       current value ('' when absent)
+    type        text (default) | number | email | password | textarea | select | datetime-local | hidden
+    options     for select: [value] or [[value, label]]
+    required, readonly, disabled, placeholder, pattern, title, minlength, maxlength, min, max, step, rows
+    help        muted text under the control
+    id          (optional) element id
+%>
+<%
+  const val = typeof value === 'undefined' || value === null ? '' : value;
+  const kind = typeof type === 'undefined' ? 'text' : type;
+  const elementId = typeof id !== 'undefined' && id ? id : 'f-' + String(name).replace(/[^a-zA-Z0-9]+/g, '-');
+  const attr = (key, v) => (typeof v === 'undefined' || v === null || v === false || v === '' ? '' : (v === true ? key : key + '="' + String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'));
+  const common = [
+    attr('required', typeof required !== 'undefined' && required),
+    attr('readonly', typeof readonly !== 'undefined' && readonly),
+    attr('disabled', typeof disabled !== 'undefined' && disabled),
+    attr('placeholder', typeof placeholder !== 'undefined' ? placeholder : ''),
+    attr('pattern', typeof pattern !== 'undefined' ? pattern : ''),
+    attr('title', typeof title !== 'undefined' ? title : ''),
+    attr('minlength', typeof minlength !== 'undefined' ? minlength : ''),
+    attr('maxlength', typeof maxlength !== 'undefined' ? maxlength : ''),
+    attr('min', typeof min !== 'undefined' ? min : ''),
+    attr('max', typeof max !== 'undefined' ? max : ''),
+    attr('step', typeof step !== 'undefined' ? step : ''),
+  ].filter(Boolean).join(' ');
+%>
+<% if (kind === 'hidden') { %>
+<input type="hidden" name="<%= name %>" value="<%= val %>">
+<% } else { %>
+<div class="form-group">
+    <label for="<%= elementId %>"><%= label %><% if (typeof required !== 'undefined' && required) { %> <span class="text-danger" title="required">*</span><% } %></label>
+    <% if (kind === 'select') { %>
+    <select id="<%= elementId %>" class="form-control" name="<%= name %>" <%- common %>>
+        <% (options || []).forEach(function (option) { const ov = Array.isArray(option) ? option[0] : option; const ol = Array.isArray(option) ? option[1] : option; %>
+        <option value="<%= ov %>"<%- String(ov) === String(val) ? ' selected' : '' %>><%= ol %></option>
+        <% }); %>
+    </select>
+    <% } else if (kind === 'textarea') { %>
+    <textarea id="<%= elementId %>" class="form-control" name="<%= name %>" rows="<%= typeof rows === 'undefined' ? 3 : rows %>" <%- common %>><%= val %></textarea>
+    <% } else { %>
+    <input id="<%= elementId %>" class="form-control" type="<%= kind %>" name="<%= name %>" value="<%= val %>" <%- common %>>
+    <% } %>
+    <% if (typeof help !== 'undefined' && help) { %><p class="help-block"><%= help %></p><% } %>
+</div>
+<% } %>

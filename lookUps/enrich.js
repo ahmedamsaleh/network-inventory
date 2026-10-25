@@ -134,7 +134,7 @@ const extendedEnrichmentSchemaKeyList = [
   'CommunityString',
 ];
 
-const deviceTypeList = { R: 'Router', S: 'Switch', A: 'Access', D: 'DSLAM', M: 'MSAN' };
+const deviceTypeList = { R: 'Router', S: 'Switch', A: 'Access', D: 'DSLAM', M: 'MSAN', G: 'GPON' };
 const deviceVendorList = { C: 'Cisco', J: 'Juniper', H: 'Huawei', A: 'Alcatel' };
 
 module.exports.enrichmentFields = enrichmentSchemaKeyList; //will be used during export process

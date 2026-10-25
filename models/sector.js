@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
 const mongoosePaginate = require('mongoose-paginate-v2');
-//Database template setup
 const sectorSchema = new mongoose.Schema({
-  name: String,
-  description: String,
+  name: { type: String, required: [true, 'Sector name is required'], trim: true },
+  description: { type: String, default: '', trim: true },
   author: {
     id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,6 +11,18 @@ const sectorSchema = new mongoose.Schema({
     email: String,
   },
 });
+sectorSchema.index({ name: 1 });
+
+/** trimmed form values; only the fields present in `input` */
+sectorSchema.statics.normalizeInput = function (input) {
+  const out = {};
+  for (const field of ['name', 'description']) {
+    if (input[field] === undefined) continue;
+    out[field] = String(input[field] === null ? '' : input[field]).trim();
+  }
+  return out;
+};
+
 sectorSchema.plugin(mongoosePaginate);
 const Sector = mongoose.model('Sector', sectorSchema);
 

@@ -1,0 +1,24 @@
+<%#
+  Action toolbar above a list. `buttons` is an array of:
+    { label, href }                          plain link button
+    { label, template, method }              form whose action is "/res/{id}/..." filled in from the
+                                             selected table row (public/javascript/tablesearch.js);
+                                             disabled until a row is checked
+    { label, action, method, confirm }       plain form
+    common: cls (btn-primary ...), icon (fa-...), id
+%>
+<div class="btn-toolbar app-toolbar" role="toolbar">
+<% buttons.forEach(function (button) { %>
+    <% const cls = 'btn ' + (button.cls || 'btn-default'); const icon = button.icon ? '<i class="fa ' + button.icon + '"></i> ' : ''; %>
+    <% if (button.href) { %>
+    <a class="<%= cls %>" <%- button.id ? 'id="' + button.id + '"' : '' %> href="<%= button.href %>"><%- icon %><%= button.label %></a>
+    <% } else { %>
+    <form class="btn-group" <%- button.id ? 'id="' + button.id + '"' : '' %> method="<%= button.method === 'GET' ? 'GET' : 'POST' %>"
+          action="<%= button.action || (button.template ? button.template.replace('{id}', '-1') : '') %>"
+          <%- button.template ? 'data-action-template="' + button.template + '"' : '' %>
+          <%- button.confirm ? 'data-confirm="' + button.confirm + '"' : '' %>>
+        <button type="submit" class="<%= cls %>" <%- button.template ? 'data-needs-selection="1" disabled' : '' %>><%- icon %><%= button.label %></button>
+    </form>
+    <% } %>
+<% }); %>
+</div>

@@ -1,4 +1,4 @@
-<%- include('../partials/header') %>
+<%- include('../partials/header', { pageTitle: 'Edit ' + (interface.ifName || interface.name || 'interface') }) %>
 <%
   // fields: Interface.fieldCatalog (models/interface.js) - every field is rendered here
   const groups = [];
@@ -7,6 +7,8 @@
     if (!group) { group = { name: field.group, fields: [] }; groups.push(group); }
     group.fields.push(field);
   }
+  const hostname = interface.hostname || (interface.device && interface.device.hostname) || '';
+  const name = interface.ifName || interface.name || '';
   function fieldValue(field) {
     const value = interface[field.name];
     if (value === undefined || value === null) return '';
@@ -15,45 +17,41 @@
     return String(value);
   }
 %>
-<div class="container">
-    <div class="row">
-        <h1 style="text-align: center">Edit Interface <%= interface.ifName || interface.name %> <small>on <%= interface.hostname || (interface.device && interface.device.hostname) %></small></h1>
-        <div style="width: 60%; margin: 25px auto;">
-            <form action="/interfaces/<%= interface._id %>?_method=PUT" method="POST">
-                <% groups.forEach(function (group) { %>
-                <h3><%= group.name %></h3>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Edit ' + name, subtitle: 'on ' + hostname, breadcrumbs: [['Interfaces', '/interfaces'], [name, '/interfaces/' + interface._id], ['Edit']] }) %>
+    <form action="/interfaces/<%= interface._id %>?_method=PUT" method="POST" id="interface-form">
+        <% groups.forEach(function (group) { %>
+        <div class="panel panel-default <%= group.name === 'International' ? 'app-international' : '' %>">
+            <div class="panel-heading"><strong><%= group.name %></strong>
+                <% if (group.name === 'International') { %><small class="text-muted">only used when the link type is "International"</small><% } %>
+                <% if (group.name === 'Parsed alias') { %><small class="text-muted">re-parsed from ifAlias whenever the alias changes</small><% } %>
+            </div>
+            <div class="panel-body">
                 <div class="row">
-                    <% group.fields.forEach(function (field) { %>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label for="interface-<%= field.name %>"><%= field.label %></label>
-                            <% if (field.kind === 'select') { %>
-                            <select id="interface-<%= field.name %>" class="form-control" name="interface[<%= field.name %>]">
-                                <% field.options.forEach(function (option) { %>
-                                <option value="<%= option %>" <%= fieldValue(field) === option ? 'selected' : '' %>><%= option === '' ? '(none)' : option %></option>
-                                <% }); %>
-                            </select>
-                            <% } else if (field.kind === 'boolean') { %>
-                            <select id="interface-<%= field.name %>" class="form-control" name="interface[<%= field.name %>]">
-                                <option value="no" <%= interface[field.name] ? '' : 'selected' %>>no</option>
-                                <option value="yes" <%= interface[field.name] ? 'selected' : '' %>>yes</option>
-                            </select>
-                            <% } else if (field.readOnly) { %>
-                            <input id="interface-<%= field.name %>" class="form-control" type="text" value="<%= fieldValue(field) %>" readonly>
-                            <% } else { %>
-                            <input id="interface-<%= field.name %>" class="form-control" type="<%= field.kind === 'number' ? 'number' : 'text' %>" <%= field.kind === 'number' ? 'step="any"' : '' %> name="interface[<%= field.name %>]" value="<%= fieldValue(field) %>" <%= field.kind === 'date' ? 'placeholder="ISO date, e.g. 2024-01-31T10:00:00Z"' : '' %>>
-                            <% } %>
-                        </div>
+                <% group.fields.forEach(function (field) { %>
+                    <div class="col-md-4">
+                    <% if (field.name === 'adminStatus' || field.name === 'operStatus') { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, type: 'select', value: fieldValue(field), options: ['', 'up', 'down', 'testing'].concat(fieldValue(field) && !['', 'up', 'down', 'testing'].includes(fieldValue(field)) ? [fieldValue(field)] : []).map(function (o) { return [o, o === '' ? '(none)' : o]; }) }) %>
+                    <% } else if (field.kind === 'select') { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, type: 'select', value: fieldValue(field), options: field.options.map(function (o) { return [o, o === '' ? '(none)' : o]; }) }) %>
+                    <% } else if (field.kind === 'boolean') { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, type: 'select', value: interface[field.name] ? 'yes' : 'no', options: [['no', 'no'], ['yes', 'yes']] }) %>
+                    <% } else if (field.readOnly) { %>
+                        <%- include('../partials/field', { name: 'ro-' + field.name, id: 'interface-' + field.name, label: field.label, value: fieldValue(field), readonly: true, help: field.group === 'Device' ? 'from the owning device' : 'read only' }) %>
+                    <% } else if (field.kind === 'number') { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, type: 'number', value: fieldValue(field), step: field.name === 'ifIndex' || field.name === 'ifType' || field.name === 'syncCycles' || field.name === 'unknownFlag' ? 1 : 'any', min: 0, required: field.name === 'ifIndex', title: 'a number' }) %>
+                    <% } else if (field.kind === 'date') { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, value: fieldValue(field), placeholder: 'YYYY-MM-DD or ISO date-time', pattern: '\\d{4}-\\d{2}-\\d{2}([T ].*)?', title: 'YYYY-MM-DD or an ISO date-time' }) %>
+                    <% } else { %>
+                        <%- include('../partials/field', { name: 'interface[' + field.name + ']', id: 'interface-' + field.name, label: field.label, value: fieldValue(field), required: field.name === 'ifName', maxlength: 255 }) %>
+                    <% } %>
                     </div>
-                    <% }); %>
-                </div>
                 <% }); %>
-                <div class="form-group">
-                    <button class="btn btn-lg btn-primary btn-block">Submit!</button>
                 </div>
-            </form>
-            <a href="/interfaces/">Go Back</a>
+            </div>
         </div>
-    </div>
+        <% }); %>
+        <%- include('../partials/form-actions', { label: 'Save changes', cancelHref: '/interfaces/' + interface._id }) %>
+    </form>
 </div>
 <%- include('../partials/footer') %>

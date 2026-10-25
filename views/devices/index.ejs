@@ -1,96 +1,16 @@
-<%- include('../partials/header') %>
-    <!--< the class container will give space around our contents>-->
-    <div class="container">
-        <header class="jumbotron">
-            <!--<adding second container to keep spacing around contents when we resize the page>-->
-            <div class="container">
-                <h1>Network Inventory</h1>
-                <p>View Devices Information</p>
-                <div class="btn-group" role="group" aria-label="all">
-                    <a href="/devices/"><button type="button" class="btn btn-default active">All Devices</button></a>
-                    <a href="/pops/"><button type="button" class="btn btn-default">All POPs</button></a>
-                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
-                    <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
-                    <a href="/counties/"><button type="button" class="btn btn-default ">All Counties</button></a>
-                    <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
-                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
-                    <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
-                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
-                    <a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces Data</button></a>
-                </div>        
-            </div>
-        </header>
-        <div class="btn-group" role="group" aria-label="devices">
-            <form id="device-add-form"  class="btn-group" action="/devices/new" method="GET">
-                <button type="button " class="btn  btn-primary">Add Device</button>
-            </form>
-            <form id="device-delete-form"  class="btn-group" action="/devices/-1/?_method=DELETE" method="POST">
-                <button type="button " class="btn  btn-danger">Delete Device</button>
-            </form>
-            <form id="device-update-form"  class="btn-group" action="" method="GET">
-                <button type="button " class="btn  btn-warning">Update Device</button>
-            </form>
-            <form id="device-sync-form"  class="btn-group" action="" method="GET">
-                <button type="button " class="btn  btn-info">Sync Device</button>
-            </form>
-        </div>        
-
-        <!--<adding flex style to fix issue related to left alignment>-->
-        <div class="row text-left">
-            <div class="table-responsive">
-                <table id="eventsTable" data-toggle="table" data-url="/devices/pagination" data-side-pagination="server" data-query-params-type="limit"
-                data-pagination="true" data-page-size="10" data-page-list="[10, 25, 50, 100, 500]" data-search="true"
-                data-height="525" data-maintain-selected="true" data-show-refresh="true" data-show-toggle="true"
-                data-show-columns="true" data-toolbar="#toolbar" data-single-select="true" data-sort-name="hostname" data-sort-order="asc">
-                    <thead>
-                        <tr>
-                            <th data-field="state" data-checkbox="true"> </th>
-                            <th data-field="_id" data-visible="false">ID</th>
-                            <th data-field="hostname" data-sortable="true" data-formatter="deviceLinkFormatter">Name</th>
-                            <th data-field="ipaddress" data-sortable="true">IP Address</th>
-                            <th data-field="community" data-sortable="true">SNMP Community</th>
-                            <th data-field="createdAt" data-sortable="true" data-formatter="dateFormatter">Date Created</th>
-                            <th data-field="updatedAt" data-sortable="true" data-formatter="dateFormatter">Date Updated</th>
-                            <th data-field="description">Description</th>
-                            <th data-field="popName" data-sortable="true">POP Name</th>
-                            <th data-field="sectorName" data-sortable="true">Sector Name</th>
-                            <th data-field="county" data-sortable="true">County</th>
-                            <th data-field="type" data-sortable="true">Type</th>
-                            <th data-field="model" data-sortable="true">Model</th>
-                            <th data-field="vendor" data-sortable="true">Vendor</th>
-                            <th data-field="defaultCollector" data-sortable="true">Default Collector</th>
-                            <th data-field="createdBy">Created By</th>
-                            <th data-field="updatedBy">Last Updated By</th>
-                            <th data-field="pop" data-sortable="true">POP</th>
-                            <th data-field="popLongName" data-sortable="true" data-visible="false">POP Long Name</th>
-                            <th data-field="popType" data-sortable="true" data-visible="false">POP Type</th>
-                            <th data-field="cabinet" data-visible="false">Cabinet</th>
-                            <th data-field="cty" data-sortable="true" data-visible="false">Cty</th>
-                            <th data-field="district" data-sortable="true" data-visible="false">District</th>
-                            <th data-field="btMSANCode" data-visible="false">BT MSAN Code</th>
-                            <th data-field="btMngIP" data-visible="false">BT Mng IP</th>
-                            <th data-field="btSector" data-visible="false">BT Sector</th>
-                            <th data-field="btDistrict" data-visible="false">BT District</th>
-                            <th data-field="sysName" data-visible="false">sysName</th>
-                            <th data-field="lastSyncTime" data-sortable="true" data-formatter="dateFormatter">Last Sync</th>
-                            <th data-field="deviceSyncCycles" data-visible="false">Sync Cycles</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-        </div>
-    </div>
-<script type="text/javascript">
-    function escapeHtml(value) {
-        return String(value === undefined || value === null ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    // bootstrap-table cell formatters (rows come from GET /devices/pagination)
-    function deviceLinkFormatter(value, row) {
-        return '<a href="/devices/' + row._id + '">' + escapeHtml(value) + '</a>';
-    }
-    function dateFormatter(value) {
-        return value ? new Date(value).toDateString() : '';
-    }
-</script>
+<%- include('../partials/header', { pageTitle: 'Devices' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Devices', subtitle: 'active inventory', breadcrumbs: [['Devices']],
+        actions: '<a class="btn btn-default" href="/devices/decommissioned"><i class="fa fa-power-off"></i> Decommissioned devices</a><a class="btn btn-default" href="/audit"><i class="fa fa-history"></i> Audit log</a>' }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add device', href: '/devices/new', cls: 'btn-primary', icon: 'fa-plus', id: 'device-add-form' },
+        { label: 'Edit device', template: '/devices/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'device-update-form' },
+        { label: 'Sync device', template: '/devices/sync/{id}', method: 'GET', cls: 'btn-info', icon: 'fa-refresh', id: 'device-sync-form' },
+        { label: 'Decommission device', template: '/devices/{id}/decommission', method: 'GET', cls: 'btn-danger', icon: 'fa-power-off', id: 'device-decommission-form' },
+        { label: 'Sync all devices', href: '/devices/sync', cls: 'btn-default', icon: 'fa-refresh' },
+        { label: 'Import (CSV/XLSX)', href: '/enrichments/import', cls: 'btn-default', icon: 'fa-upload' },
+        { label: 'Export', href: '/enrichments/export', cls: 'btn-default', icon: 'fa-download' },
+    ] }) %>
+    <%- include('../partials/data-table', { url: '/devices/pagination', columns: columns.devices, sortName: 'hostname' }) %>
+</div>
 <%- include('../partials/footer') %>

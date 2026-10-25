@@ -1,0 +1,9 @@
+<% const u = user || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Validated user</strong></div>
+    <div class="panel-body">
+        <%- include('../partials/field', { name: 'user[name]', label: 'Name', value: u.name, maxlength: 64, placeholder: 'First and last name' }) %>
+        <%- include('../partials/field', { name: 'user[email]', label: 'E-mail', type: 'email', value: u.email, required: true, maxlength: 128, placeholder: 'name@example.com', help: 'The address the user will sign up with' }) %>
+        <%- include('../partials/field', { name: 'user[role]', label: 'Role', type: 'select', value: u.role || 'operator', options: roles.map(function (r) { return [r, r]; }), help: 'Granted to the account at signup' }) %>
+    </div>
+</div>

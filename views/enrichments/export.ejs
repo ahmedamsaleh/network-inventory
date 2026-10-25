@@ -1,0 +1,90 @@
+<%- include('../partials/header', { pageTitle: 'Export data' }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Export data', subtitle: 'CSV / XLSX / ZIP with the same criteria as the lists', breadcrumbs: [['Export']] }) %>
+    <div class="row"><div class="col-md-10 col-md-offset-1">
+            <form id="export-form" method="GET" action="/enrichments/export/download">
+                <div class="panel panel-default"><div class="panel-heading"><strong>Datasets</strong></div><div class="panel-body">
+                <div class="row">
+                <% datasets.forEach(function (dataset) { %>
+                <div class="col-md-4 checkbox" style="margin-top: 0;">
+                    <label><input type="checkbox" name="datasets" value="<%= dataset.name %>" <%= dataset.name === 'enrichment' ? 'checked' : '' %>> <%= dataset.label %></label>
+                </div>
+                <% }); %>
+                </div>
+
+                </div></div>
+                <div class="panel panel-default"><div class="panel-heading"><strong>Format</strong></div><div class="panel-body">
+                <div class="radio"><label><input type="radio" name="format" value="xlsx" checked> XLSX &ndash; one workbook, one sheet per dataset</label></div>
+                <div class="radio"><label><input type="radio" name="format" value="csv"> CSV &ndash; one file per dataset (several datasets are delivered as a ZIP archive)</label></div>
+                <p id="csv-warning" class="text-warning" style="display:none;">
+                    <strong>Note:</strong> you selected several datasets with the CSV format, so you will receive <strong>multiple files</strong> (one CSV per dataset, packed in a ZIP). Choose XLSX to get a single file with one sheet per dataset.
+                </p>
+
+                </div></div>
+                <div class="panel panel-default"><div class="panel-heading"><strong>Criteria</strong></div><div class="panel-body">
+                <p class="help-block">All criteria are optional and combine with AND. Text criteria match case-insensitively; the same criteria are used by the list pages' search. Device criteria also apply to the Enrichment export; interface criteria to the secondPOP check.</p>
+                <div class="form-group">
+                    <label for="search">Free text search</label>
+                    <input class="form-control" type="text" name="search" id="search" placeholder="matches hostname, IP, POP, vendor, ...">
+                </div>
+                <div class="row">
+                    <div class="col-md-4"><div class="form-group"><label>Device type</label><input class="form-control" type="text" name="filter[type]" placeholder="Router, MSAN, ... (comma = any of)"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Vendor</label><input class="form-control" type="text" name="filter[vendor]" placeholder="Juniper,Huawei"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>POP (short name)</label><input class="form-control" type="text" name="filter[pop]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>County</label><input class="form-control" type="text" name="filter[cty]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Hostname contains</label><input class="form-control" type="text" name="filter[hostname][like]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Model</label><input class="form-control" type="text" name="filter[model]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Special service (interfaces)</label><input class="form-control" type="text" name="filter[specialService]" placeholder="International,Bitstream"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Speed category (interfaces)</label><input class="form-control" type="text" name="filter[speedCat]" placeholder="10G"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>API flag (interfaces)</label>
+                        <select class="form-control" name="filter[apiFlag]"><option value="">any</option><option value="true">true</option><option value="false">false</option></select></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Last sync from</label><input class="form-control" type="date" name="filter[lastSyncTime][from]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Last sync to</label><input class="form-control" type="date" name="filter[lastSyncTime][to]"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label>Discovered (devices)</label>
+                        <select class="form-control" name="filter[discovered]"><option value="">any</option><option value="true">true</option><option value="false">false</option></select></div></div>
+                </div>
+                <div class="checkbox">
+                    <label><input type="checkbox" name="markApiFlag" value="1"> Mark the exported interfaces as handed to the external API (apiFlag = true)</label>
+                </div>
+                <p class="help-block">Available criteria &ndash; devices: <%= criteria.devices.join(', ') %>.<br>Interfaces: <%= criteria.interfaces.slice(0, 40).join(', ') %>, ...</p>
+                </div></div>
+                <div class="app-form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-download"></i> Download</button>
+                    <a class="btn btn-default" href="/home">Cancel</a>
+                </div>
+            </form>
+    </div></div>
+</div>
+<script type="text/javascript">
+    (function () {
+        var form = document.getElementById('export-form');
+        var warning = document.getElementById('csv-warning');
+        function selectedDatasets() {
+            return Array.prototype.filter.call(form.querySelectorAll('input[name="datasets"]'), function (box) { return box.checked; }).length;
+        }
+        function csvChosen() {
+            var radio = form.querySelector('input[name="format"]:checked');
+            return radio && radio.value === 'csv';
+        }
+        function refresh() {
+            warning.style.display = csvChosen() && selectedDatasets() > 1 ? 'block' : 'none';
+        }
+        Array.prototype.forEach.call(form.querySelectorAll('input[name="datasets"], input[name="format"]'), function (input) {
+            input.addEventListener('change', refresh);
+        });
+        form.addEventListener('submit', function (event) {
+            if (selectedDatasets() === 0) {
+                event.preventDefault();
+                window.alert('Select at least one dataset.');
+                return;
+            }
+            if (csvChosen() && selectedDatasets() > 1) {
+                if (!window.confirm('You chose CSV with several datasets: you will receive multiple files (a ZIP with one CSV per dataset). Continue? Choose XLSX for a single file with several sheets.')) {
+                    event.preventDefault();
+                }
+            }
+        });
+        refresh();
+    })();
+</script>
+<%- include('../partials/footer') %>

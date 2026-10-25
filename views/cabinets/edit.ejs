@@ -1,0 +1,9 @@
+<%- include('../partials/header', { pageTitle: 'Edit ' + cabinet.cabinet }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Edit ' + cabinet.cabinet, breadcrumbs: [['Cabinets', '/cabinets'], [cabinet.cabinet, '/cabinets/' + cabinet._id], ['Edit']] }) %>
+    <form method="POST" action="/cabinets/<%= cabinet._id %>/?_method=PUT">
+        <%- include('_form', { cabinet: cabinet }) %>
+        <%- include('../partials/form-actions', { label: 'Save changes', cancelHref: '/cabinets/' + cabinet._id }) %>
+    </form>
+</div>
+<%- include('../partials/footer') %>

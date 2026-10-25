@@ -1,0 +1,27 @@
+<%- include('../partials/header', { pageTitle: cabinet.cabinet }) %>
+<%
+  let actions = '<a class="btn btn-warning" href="/cabinets/' + cabinet._id + '/edit"><i class="fa fa-pencil"></i> Edit</a>';
+  actions += '<form id="delete-form" action="/cabinets/' + cabinet._id + '/?_method=DELETE" method="POST" data-confirm="Delete cabinet ' + cabinet.cabinet + '? The audit log keeps the last copy."><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></form>';
+  const mapLink = cabinet.location ? '<a href="https://www.openstreetmap.org/?mlat=' + encodeURIComponent(cabinet.location.split(',')[0].trim()) + '&mlon=' + encodeURIComponent((cabinet.location.split(',')[1] || '').trim()) + '" target="_blank" rel="noopener">' + cabinet.location + ' <i class="fa fa-external-link"></i></a>' : '';
+%>
+<div class="container">
+    <%- include('../partials/page-header', { title: cabinet.cabinet, subtitle: 'cabinet', breadcrumbs: [['Cabinets', '/cabinets'], [cabinet.cabinet]], actions: actions }) %>
+    <div class="row">
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'Cabinet', rows: [
+                ['Cabinet', cabinet.cabinet],
+                ['POP', typeof pop !== 'undefined' && pop ? '<a href="/pops/' + pop._id + '">' + cabinet.pop + '</a> - ' + pop.popLongName : cabinet.pop, { raw: true }],
+                ['Geo-location', mapLink, { raw: true }],
+                ['How to reach it', cabinet.locNotes],
+            ] }) %>
+        </div>
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'Usage', rows: [
+                ['Devices', '<a href="/devices?search=' + encodeURIComponent(cabinet.cabinet) + '">' + (typeof deviceCount !== 'undefined' ? deviceCount : 0) + ' active device(s)</a>', { raw: true }],
+                ['Created', h.dateTime(cabinet.createdAt) + (cabinet.author && cabinet.author.email ? ' by ' + cabinet.author.email : '')],
+                ['Last update', h.dateTime(cabinet.lastUpdate)],
+            ] }) %>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

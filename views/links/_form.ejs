@@ -1,0 +1,29 @@
+<% const l = link || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Endpoints</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[device1]', label: 'Device 1 (hostname)', value: l.device1, required: true, minlength: 5, maxlength: 64, placeholder: 'e.g. ONGAR-R39J-D-IR' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[interface1]', label: 'Interface 1', value: l.interface1, maxlength: 64, placeholder: 'e.g. ge-0/0/0' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[device2]', label: 'Device 2 (hostname)', value: l.device2, required: true, minlength: 5, maxlength: 64 }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[interface2]', label: 'Interface 2', value: l.interface2, maxlength: 64 }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[pop1]', label: 'POP 1', value: l.pop1, maxlength: 64, placeholder: 'shortName_cty' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'link[pop2]', label: 'POP 2', value: l.pop2, maxlength: 64, placeholder: 'shortName_cty' }) %></div>
+        </div>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Link</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'link[type]', label: 'Type', type: 'select', value: l.type || '', options: types.map(function (t) { return [t, t === '' ? '(none)' : t]; }) }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'link[specialService]', label: 'Special service', value: l.specialService, maxlength: 64 }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'link[speed]', label: 'Speed (bit/s)', type: 'number', value: l.speed, min: 0, step: 'any', placeholder: '10000000000' }) %></div>
+        </div>
+        <%- include('../partials/field', { name: 'link[label]', label: 'Label', value: l.label, maxlength: 255 }) %>
+    </div>
+</div>

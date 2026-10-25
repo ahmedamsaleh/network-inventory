@@ -78,6 +78,17 @@ middlewareObj.findByIdOr404 = async function (Model, id, response, label, backUr
   return document;
 };
 
+/** user-facing text for a Mongoose validation / duplicate-key error */
+middlewareObj.describeError = function (error) {
+  if (error && error.code === 11000) return 'An entry with the same unique value already exists';
+  if (error && error.errors) {
+    return Object.values(error.errors)
+      .map((detail) => detail.message)
+      .join(', ');
+  }
+  return error && error.message ? error.message : 'Something went wrong';
+};
+
 middlewareObj.isLoggedIn = function (request, response, next) {
   // return next();//hack
   if (request.isAuthenticated()) {
@@ -85,6 +96,24 @@ middlewareObj.isLoggedIn = function (request, response, next) {
   }
   request.flash('error', 'You need to be logged in to do that');
   response.redirect('/login');
+};
+
+/** true when the logged-in user has the admin role (ValidatedUser role at signup) */
+middlewareObj.isAdminUser = function (user) {
+  return Boolean(user && user.role === 'admin');
+};
+
+/** isLoggedIn + the admin role; others are sent back with a message */
+middlewareObj.isAdmin = function (request, response, next) {
+  if (!request.isAuthenticated()) {
+    request.flash('error', 'You need to be logged in to do that');
+    return response.redirect('/login');
+  }
+  if (middlewareObj.isAdminUser(request.user)) {
+    return next();
+  }
+  request.flash('error', 'Administrator rights are required to do that');
+  response.redirect(request.get('Referrer') || '/devices');
 };
 
 module.exports = middlewareObj;

@@ -1,0 +1,13 @@
+<% const m = model || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Device model</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'devicemodel[name]', label: 'Model name', value: m.name, required: true, maxlength: 64, placeholder: 'e.g. MX480', help: 'Unique (case-insensitive)' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'devicemodel[vendor]', label: 'Vendor', value: m.vendor, maxlength: 64, placeholder: 'e.g. Juniper' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'devicemodel[type]', label: 'Type', type: 'select', value: m.type || '', options: [['', '(none)']].concat(types.map(function (t) { return [t, t]; })) }) %></div>
+        </div>
+        <%- include('../partials/field', { name: 'devicemodel[sysObjectIDs]', label: 'sysObjectIDs', type: 'textarea', rows: 4, value: (m.sysObjectIDs || []).join('\n'), pattern: undefined, placeholder: '1.3.6.1.4.1.2636.1.1.1.2.25', help: 'One OID per line (or comma separated). An entry matches a device when equal to its sysObjectID or a prefix of it; the longest match wins. Anything that is not an OID is dropped.' }) %>
+        <%- include('../partials/field', { name: 'devicemodel[notes]', label: 'Notes', value: m.notes, maxlength: 500 }) %>
+    </div>
+</div>

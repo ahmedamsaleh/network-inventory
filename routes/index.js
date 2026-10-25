@@ -4,6 +4,8 @@ const User = require('../models/user');
 const ValidatedUser = require('../models/validatedUser');
 const nodemailer = require('nodemailer');
 const config = require('../config');
+const middleware = require('../middleware');
+const dashboard = require('../services/dashboard');
 const transporter = nodemailer.createTransport(config.smtp);
 
 const mailOptions = {
@@ -28,8 +30,9 @@ async function sendVerificationMail(user) {
   }
 }
 //add routes
-router.get('/home', function (request, response) {
-  response.render('home');
+// dashboard: inventory counts, sync / import status, recent activity
+router.get('/home', middleware.isLoggedIn, async function (request, response) {
+  response.render('home', { dashboard: await dashboard.summary() });
 });
 router.get('/', function (request, response) {
   response.render('landing');
@@ -43,28 +46,55 @@ router.get('/getenv', function (req, res) {
 //======================
 //show register Form
 router.get('/signup', function (request, response) {
-  response.render('signup');
+  response.render('signup', { form: {} });
 });
+
+const PASSWORD_MIN_LENGTH = 6;
+
+/** signup form problems (the view re-renders with them); empty = ok */
+function validateSignup(form) {
+  const errors = [];
+  if (!form.name) errors.push('Name is required');
+  if (!form.email || !ValidatedUser.EMAIL_PATTERN.test(form.email))
+    errors.push('A valid e-mail address is required');
+  if (!form.password || form.password.length < PASSWORD_MIN_LENGTH)
+    errors.push('The password must have at least ' + PASSWORD_MIN_LENGTH + ' characters');
+  return errors;
+}
+
 //handle signup logic
 router.post('/signup', async function (request, response) {
-  const newUser = new User({ name: request.body.name, email: request.body.email });
-  let foundUser;
-  try {
-    foundUser = await ValidatedUser.findOne({ email: request.body.email });
-  } catch (error) {
-    request.flash('error', error);
-    return response.render('signup');
+  const form = {
+    name: String(request.body.name || '').trim(),
+    email: String(request.body.email || '')
+      .trim()
+      .toLowerCase(),
+    password: typeof request.body.password === 'string' ? request.body.password : '',
+  };
+  const errors = validateSignup(form);
+  if (errors.length) {
+    // the form is re-rendered straight away, so the messages are passed explicitly
+    return response.render('signup', {
+      error: errors,
+      form: { name: form.name, email: form.email },
+    });
   }
+  const newUser = new User({ name: form.name, email: form.email });
+  const foundUser = await ValidatedUser.findOne({ email: form.email });
   if (foundUser == null) {
     request.flash('error', 'User not allowed');
-    return response.render('email-error');
+    return response.render('email-error', { email: form.email });
   }
+  // the role granted on the whitelist entry (admin | operator) is the user's role
+  newUser.role = foundUser.role || 'admin';
   let user;
   try {
-    user = await User.register(newUser, request.body.password);
+    user = await User.register(newUser, form.password);
   } catch (error) {
-    request.flash('error', error.message);
-    return response.render('signup');
+    return response.render('signup', {
+      error: [error.message],
+      form: { name: form.name, email: form.email },
+    });
   }
   //send email verification (in the background)
   sendVerificationMail(user);
@@ -72,17 +102,27 @@ router.post('/signup', async function (request, response) {
 });
 
 router.get('/email-verification', function (request, response) {
-  response.render('email-verification', { title: 'Email verification sent!' });
+  response.render('email-verification', {
+    title: 'E-mail verification sent',
+    message:
+      'Check your mailbox for the activation link. Until the e-mail is verified the account cannot log in.',
+  });
 });
 
 router.get('/verify', async function (request, response) {
-  try {
-    await User.verifyEmail(request.query.authToken);
-  } catch (error) {
-    console.log('error:', error);
-    return;
+  const user = await User.verifyEmail(request.query.authToken);
+  if (!user) {
+    return response.status(404).render('email-verification', {
+      title: 'Unknown verification link',
+      message:
+        'This verification link is not valid (any more). Sign up again to receive a new one.',
+      failed: true,
+    });
   }
-  response.render('email-verification', { title: 'Email verified succesfully!' });
+  response.render('email-verification', {
+    title: 'E-mail verified successfully',
+    message: 'Your account ' + user.email + ' is active: you can log in now.',
+  });
 });
 
 //show login form
@@ -96,6 +136,7 @@ router.post(
   passport.authenticate('local', {
     successRedirect: '/home',
     failureRedirect: '/login',
+    failureFlash: true, // the strategy's message (wrong password, e-mail not verified, ...)
   })
 );
 
@@ -116,16 +157,16 @@ router.get('/changepass', function (request, response) {
   response.render('changepassword');
 });
 
-router.post('/changepass', async function (request, res, next) {
+router.post('/changepass', function (request, response) {
   if (request.body.newpass !== request.body.newpassconfirm) {
-    throw new Error('password and confirm password do not match');
+    request.flash('error', 'password and confirm password do not match');
+    return response.redirect('/changepass');
   }
-
   // Changing the password is not available: this form is unauthenticated
-  // (anyone could reset any account by e-mail) and the original handler
-  // never worked (it referenced an undefined variable and always failed).
-  // Kept as an explicit error so the behavior (HTTP 500) is unchanged.
-  throw new Error('password change is not available');
+  // (anyone could reset any account by e-mail) and the original handler never
+  // worked. The user is told so instead of getting a server error.
+  request.flash('error', 'password change is not available');
+  response.redirect('/changepass');
 });
 
 module.exports = router;

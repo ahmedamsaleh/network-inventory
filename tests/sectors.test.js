@@ -27,8 +27,11 @@ describe('Sector CRUD (authenticated)', () => {
 
   test('INDEX: GET /sectors renders the list', async () => {
     await app.models.Sector.create({ name: 'Preexisting-Sector' });
+    // the list itself is loaded by bootstrap-table from /sectors/pagination
     const res = await agent.get('/sectors').expect(200);
-    expect(res.text).toContain('Preexisting-Sector');
+    expect(res.text).toContain('data-url="/sectors/pagination"');
+    const json = await agent.get('/sectors/pagination').expect(200);
+    expect(json.body.rows.map((r) => r.name)).toContain('Preexisting-Sector');
   });
 
   test('NEW: GET /sectors/new renders the form', async () => {
@@ -36,7 +39,7 @@ describe('Sector CRUD (authenticated)', () => {
     expect(res.text).toContain('name="sector[name]"');
   });
 
-  test('CREATE: POST /sectors stores name + author but silently drops the description', async () => {
+  test('CREATE: POST /sectors stores name, description and author', async () => {
     await agent
       .post('/sectors')
       .type('form')
@@ -48,10 +51,20 @@ describe('Sector CRUD (authenticated)', () => {
     expect(sector).not.toBeNull();
     sectorId = String(sector._id);
     expect(sector.author.email).toBe(user.email);
-    // ODD: the route builds {name, shortName: description, author}; the
-    // schema has no `shortName` path, so the description never reaches the DB.
-    expect(sector.description).toBeUndefined();
+    expect(sector.description).toBe('the north sector');
     expect(sector.toObject().shortName).toBeUndefined();
+  });
+
+  test('CREATE: a blank name is rejected (flash + back to the form, nothing stored)', async () => {
+    const before = await app.models.Sector.countDocuments({});
+    await agent
+      .post('/sectors')
+      .type('form')
+      .send({ 'sector[name]': '   ', 'sector[description]': 'no name' })
+      .expect(302)
+      .expect('location', '/sectors/new');
+    expect(await app.models.Sector.countDocuments({})).toBe(before);
+    expect((await agent.get('/sectors/new').expect(200)).text).toContain('Sector name is required');
   });
 
   test('SHOW: GET /sectors/:id renders the sector', async () => {
@@ -88,10 +101,14 @@ describe('Sector CRUD (authenticated)', () => {
     expect(sector.description).toBe('renamed');
   });
 
-  test('PAGINATION: GET /sectors/pagination returns JSON (limit 500)', async () => {
-    const res = await agent.get('/sectors/pagination').expect(200).expect('content-type', /json/);
-    expect(res.body).toMatchObject({ limit: 500 });
-    expect(res.body.docs.map((d) => d.name)).toContain('Dublin-South');
+  test('PAGINATION: GET /sectors/pagination returns bootstrap-table {total, rows} (select2 ids)', async () => {
+    const res = await agent
+      .get('/sectors/pagination')
+      .query({ limit: 500, search: 'Dublin-South' })
+      .expect(200)
+      .expect('content-type', /json/);
+    expect(res.body.total).toBe(1);
+    expect(res.body.rows[0]).toMatchObject({ name: 'Dublin-South', id: sectorId });
   });
 
   test('DESTROY: DELETE /sectors/:id removes the sector', async () => {

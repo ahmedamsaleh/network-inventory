@@ -1,62 +1,11 @@
-<%- include('../partials/header') %>
-    <!--< the class container will give space around our contents>-->
-    <div class="container">
-        <header class="jumbotron">
-            <!--<adding second container to keep spacing around contents when we resize the page>-->
-            <div class="container">
-                <h1>Network Inventory</h1>
-                <p>View Counties Information</p>
-                <div class="btn-group" role="group" aria-label="all">
-                    <a href="/devices/"><button type="button" class="btn btn-default">All Devices</button></a>
-                    <a href="/pops/"><button type="button" class="btn btn-default">All POPs</button></a>
-                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
-                    <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
-                    <a href="/counties/"><button type="button" class="btn btn-default active">All Counties</button></a>
-                    <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
-                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
-                    <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
-                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
-                    <a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces Data</button></a>
-                </div>        
-            </div>
-        </header>
-        <div class="btn-group" role="group" aria-label="gvrnt">
-            <form id="county-add-form"  class="btn-group" action="/counties/new" method="GET">
-                <button type="button " class="btn  btn-primary">Add County</button>
-            </form>
-            <form id="county-delete-form"  class="btn-group" action="/counties/-1/?_method=DELETE" method="POST">
-                <button id="county-delete-button"  type="button " class="btn  btn-danger">Delete County</button>
-            </form>
-            <form id="county-update-form"  class="btn-group" action="" method="GET">
-                <button type="button " class="btn  btn-warning">Update County</button>
-            </form>
-        </div>        
-
-        <div class="row text-left">
-            <div class="table-responsive">
-                <table id="eventsTable" data-pagination="true" data-search="true"data-toggle="table" data-height="525" data-pagination="true" 
-                data-maintain-selected="true" data-search="true" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" 
-                data-toolbar="#toolbar" data-single-select="true">
-                    <thead>
-                        <tr>
-                            <th data-field="state" data-checkbox="true"> </th>
-                            <th data-field="_id" data-visible="false">ID</th>
-                            <th data-field="name" data-sortable="true">Name</th>
-                            <th data-field="acronym">Acronym</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% counties.forEach(function(county){ %>
-                            <tr>
-                                <td><% %></td>
-                                <td><%= county._id %></td>
-                                <td><a href="/counties/<%= county._id %>"><%= county.name %></a></td>
-                                <td><%= county.acronym %></td>
-                            </tr>
-                        <% }); %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<%- include('../partials/header', { pageTitle: 'Counties' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Counties', breadcrumbs: [['Counties']] }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add county', href: '/counties/new', cls: 'btn-primary', icon: 'fa-plus', id: 'county-add-form' },
+        { label: 'Edit county', template: '/counties/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'county-update-form' },
+        { label: 'Delete county', template: '/counties/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'county-delete-form', confirm: 'Delete the selected county? The audit log keeps the last copy.' },
+    ] }) %>
+    <%- include('../partials/data-table', { url: '/counties/pagination', columns: columns.counties, sortName: 'name' }) %>
+</div>
 <%- include('../partials/footer') %>

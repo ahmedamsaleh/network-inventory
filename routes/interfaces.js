@@ -1,10 +1,13 @@
 const express = require('express');
+const audit = require('../services/audit');
 const router = express.Router({ mergeParams: true });
 const Device = require('../models/device');
 const Interface = require('../models/interface');
 const middleware = require('../middleware');
 const pagination = require('../services/pagination');
+const datasets = require('../services/datasets');
 const parser = require('../middleware/parser/parser');
+const logger = require('../middleware/logger');
 
 const TRUE_WORDS = ['yes', 'true', '1', 'on'];
 
@@ -37,35 +40,43 @@ function coerceField(entry, raw) {
   }
 }
 
-/** applies every editable catalog field present in the form to the document */
+/**
+ * Applies every editable catalog field present in the form to the document.
+ * Returns the validation messages for values that could not be coerced
+ * (non-numeric numbers, unknown select options, unparsable dates); those
+ * fields are left untouched.
+ */
 function applyFormToInterface(doc, form) {
+  const errors = [];
   for (const entry of Interface.fieldCatalog) {
     if (entry.readOnly) continue;
-    const value = coerceField(entry, form[entry.name]);
-    if (value !== undefined) doc.set(entry.name, value);
+    const raw = form[entry.name];
+    const value = coerceField(entry, raw);
+    if (value !== undefined) {
+      doc.set(entry.name, value);
+    } else if (
+      raw !== undefined &&
+      String(raw).trim() !== '' &&
+      entry.kind !== 'json' &&
+      entry.kind !== 'select' // unknown options are ignored (legacy clients send free text)
+    ) {
+      errors.push(
+        entry.label +
+          ': ' +
+          (entry.kind === 'number'
+            ? 'must be a number'
+            : entry.kind === 'date'
+              ? 'must be a date (YYYY-MM-DD or ISO date-time)'
+              : 'invalid value')
+      );
+    }
   }
-}
-
-/** copies the owning device's descriptive fields onto the interface */
-function applyDeviceToInterface(doc, device) {
-  doc.device = { id: device._id, hostname: device.hostname, ipaddress: device.ipaddress };
-  doc.hostname = device.hostname;
-  doc.ipaddress = device.ipaddress;
-  doc.pop = device.pop || (device.popName && device.popName.name) || '';
-  doc.devType = device.type || '';
-  doc.devVendor = device.vendor || '';
-  doc.devModel = device.model || '';
-  doc.devPOP = device.pop || '';
-  doc.devPOPLongName = device.popLongName || '';
-  doc.devCabinet = device.cabinet || '';
-  doc.devCty = device.cty || (device.county && device.county.name) || '';
-  doc.devDistrict = device.district || '';
-  doc.devSector = (device.sector && device.sector.name) || '';
-  doc.devPOPType = device.popType || '';
-  doc.btMSANCode = device.btMSANCode || '';
-  doc.btMngIP = device.btMngIP || '';
-  doc.btSector = device.btSector || '';
-  doc.btDistrict = device.btDistrict || '';
+  if (form.ifIndex !== undefined && String(form.ifIndex).trim() !== '') {
+    const index = Number(form.ifIndex);
+    if (Number.isFinite(index) && (index < 0 || !Number.isInteger(index)))
+      errors.push('ifIndex: must be a non-negative integer');
+  }
+  return errors;
 }
 
 /** recomputes the derived speed texts / category from the stored speeds */
@@ -82,71 +93,8 @@ function refreshSpeedTexts(doc) {
 }
 
 // bootstrap-table server-side pagination: GET /interfaces/pagination?limit&offset&search&sort&order
-const CATALOG_NAMES = Interface.fieldCatalog.map((entry) => entry.name);
-const interfacePaginationSpec = {
-  Model: Interface,
-  searchFields: [
-    'ifName',
-    'ifAlias',
-    'ifDescr',
-    'ifTypeStr',
-    'hostname',
-    'ipaddress',
-    'pop',
-    'type',
-    'specialService',
-    'secondHost',
-    'secondPOP',
-    'secondInterface',
-    'label',
-    'connectionType',
-    'linkType',
-    'speedCat',
-    'sp_provider',
-    'sp_customer',
-    'sp_service',
-    'sp_linkNumber',
-    'sp_CID',
-  ],
-  sortable: Object.fromEntries(CATALOG_NAMES.map((name) => [name, name])),
-  defaultSort: 'hostname',
-  // every catalog field plus the legacy names the list still shows
-  projection: Object.fromEntries(
-    [
-      ...CATALOG_NAMES,
-      'name',
-      'alias',
-      'index',
-      'description',
-      'author.email',
-      'lastUpdatedBy.email',
-      'created',
-      'updated',
-      'device.hostname',
-      'device.ipaddress',
-    ].map((name) => [name, 1])
-  ),
-  mapRow: function (intf) {
-    const row = { _id: String(intf._id) };
-    for (const name of CATALOG_NAMES) {
-      row[name] = name === 'counters' ? JSON.stringify(intf.counters || {}) : intf[name];
-    }
-    // legacy fallbacks for documents created before the canonical names existed
-    row.ifName = row.ifName || intf.name;
-    row.ifAlias = row.ifAlias || intf.alias;
-    row.ifIndex = row.ifIndex === undefined || row.ifIndex === null ? intf.index : row.ifIndex;
-    row.ifDescr = row.ifDescr || intf.description;
-    row.hostname = row.hostname || (intf.device && intf.device.hostname);
-    row.ipaddress = row.ipaddress || (intf.device && intf.device.ipaddress);
-    row.createdAt = row.createdAt || intf.created;
-    row.lastUpdate = row.lastUpdate || intf.updated;
-    row.createdBy = intf.author && intf.author.email;
-    row.updatedBy = intf.lastUpdatedBy && intf.lastUpdatedBy.email;
-    return row;
-  },
-};
 router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
-  response.json(await pagination.paginatedResponse(request.query, interfacePaginationSpec));
+  response.json(await pagination.paginatedResponse(request.query, datasets.interfaces));
 });
 
 //INDEX - the interface list is loaded by the table from /interfaces/pagination
@@ -189,10 +137,7 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
     request.flash('error', 'Cannot add the interface: device not found');
     return response.redirect('/devices');
   }
-  //create new interface (linked to the device) with the current user as author
-  const newInterface = new Interface();
-  applyFormToInterface(newInterface, anInterface);
-  // legacy input names of the form / API
+  // legacy input names of the form / API map onto the canonical ones
   for (const [legacy, canonical] of [
     ['name', 'ifName'],
     ['alias', 'ifAlias'],
@@ -201,25 +146,30 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
     ['speed', 'ifSpeed'],
   ]) {
     if (anInterface[legacy] !== undefined && anInterface[canonical] === undefined) {
-      const value = coerceField(
-        { kind: ['index', 'speed'].includes(legacy) ? 'number' : 'text' },
-        anInterface[legacy]
-      );
-      if (value !== undefined) newInterface.set(canonical, value);
+      anInterface[canonical] = anInterface[legacy];
     }
   }
-  applyDeviceToInterface(newInterface, foundDevice);
+  //create new interface (linked to the device) with the current user as author
+  const newInterface = new Interface();
+  const formErrors = applyFormToInterface(newInterface, anInterface);
+  if (!newInterface.ifName || !String(newInterface.ifName).trim()) {
+    formErrors.unshift('ifName is required');
+  }
+  if (formErrors.length) {
+    request.flash('error', formErrors.join('. '));
+    return response.redirect('/interfaces/new?device=' + foundDevice._id);
+  }
+  newInterface.applyDevice(foundDevice);
   newInterface.author = { id: request.user._id, email: request.user.email };
   newInterface.applyParsedAlias();
   let createdInterface;
   try {
     createdInterface = await newInterface.save();
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong: ' + error.message);
-    return response.redirect('/devices/' + foundDevice._id);
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/interfaces/new?device=' + foundDevice._id);
   }
-  console.log('interface from user- ' + request.user.email + ' is: ' + createdInterface);
+  logger.info('interface ' + createdInterface.ifName + ' added by ' + request.user.email);
   //connect new interface to device (atomic push: a full save() would re-run the
   //hostname/ip uniqueness validators against the device itself)
   await Device.findByIdAndUpdate(foundDevice._id, { $push: { interfaces: createdInterface } });
@@ -228,34 +178,56 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
   response.redirect('/devices/' + foundDevice._id);
 });
 
-router.get('/:id', async function (request, response) {
-  let foundInterface;
-  try {
-    foundInterface = await Interface.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  response.render('interfaces/edit', { interface: foundInterface, fields: Interface.fieldCatalog });
+//SHOW INTERFACE ROUTE - every catalog field, grouped (views/interfaces/show.ejs)
+router.get('/:id', middleware.isLoggedIn, async function (request, response) {
+  const foundInterface = await middleware.findByIdOr404(
+    Interface,
+    request.params.id,
+    response,
+    'Interface',
+    '/interfaces'
+  );
+  if (!foundInterface) return;
+  const device = await Device.findOne(
+    {
+      hostname:
+        foundInterface.hostname || (foundInterface.device && foundInterface.device.hostname),
+    },
+    { _id: 1, hostname: 1, decommissioned: 1 }
+  ).lean();
+  response.render('interfaces/show', {
+    interface: foundInterface,
+    owner: device,
+    fields: Interface.fieldCatalog,
+  });
 });
 
 //DESTROY Interface ROUTE
 router.delete('/:id', middleware.isLoggedIn, async function (request, response) {
-  let foundInterface;
+  if (request.params.id == -1) {
+    request.flash('error', 'Please select an interface first');
+    return response.redirect(request.get('Referrer') || '/interfaces');
+  }
+  let foundInterface = null;
   try {
     foundInterface = await Interface.findById(request.params.id);
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'something went wrong while updating the interface');
-    return response.redirect(request.get('Referrer') || '/');
+    if (error.name !== 'CastError') throw error;
   }
-  const device = foundInterface.device.hostname;
-  console.log(device);
+  if (!foundInterface) {
+    request.flash('error', 'Interface not found');
+    return response.redirect(request.get('Referrer') || '/interfaces');
+  }
+  const device = foundInterface.device && foundInterface.device.hostname;
 
   try {
-    await Interface.findByIdAndDelete(request.params.id);
+    // the audit entry (with a snapshot) is written before the document is removed
+    await audit.recordDeletion(request, 'interface', foundInterface, { hostname: device });
+    await Interface.deleteOne({ _id: foundInterface._id });
   } catch (error) {
-    console.log(error);
+    logger.error('interface delete failed (nothing removed): ' + error.message);
+    request.flash('error', 'Delete failed (nothing was removed): ' + error.message);
+    return response.redirect(request.get('Referrer') || '/');
   }
 
   // keep the embedded copy on the containing device in sync
@@ -265,59 +237,55 @@ router.delete('/:id', middleware.isLoggedIn, async function (request, response) 
       if (foundDevice.interfaces[i].index == foundInterface.index) {
         //remove interface from the device
         foundDevice.interfaces.splice(i, 1);
-        console.log(foundDevice.interfaces);
         try {
           await Device.updateOne({ _id: foundDevice._id }, foundDevice);
         } catch (error) {
-          console.log(error);
+          logger.error('interface delete: embedded copy not updated: ' + error.message);
         }
         break;
       }
     }
-  } catch (error) {
-    request.flash('error', "Can't find containing device");
-    console.log("Can't find containing device");
+  } catch {
+    request.flash('warning', "Can't find the containing device");
   }
-  response.redirect(request.get('Referrer') || '/');
+  request.flash('success', 'Interface deleted (the audit log keeps the last copy)');
+  // the referrer may be the page of the deleted interface itself
+  const referrer = request.get('Referrer') || '';
+  if (referrer.indexOf('/interfaces/' + foundInterface._id) !== -1) {
+    return response.redirect('/interfaces');
+  }
+  response.redirect(referrer || '/interfaces');
 });
 
 //EDIT INTERFACE ROUTE
 router.get('/:id/edit', middleware.isLoggedIn, async function (request, response) {
-  //is user logged in?
-  console.log('Update an interface');
-  // response.redirect("/devices/");
-  let foundInterface;
-  try {
-    foundInterface = await Interface.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    request.flash('error', 'error found while searching for interface!!!');
-    return response.redirect(request.get('Referrer') || '/');
-  }
-  if (foundInterface) {
-    response.render('interfaces/edit', {
-      interface: foundInterface,
-      device: foundInterface.device,
-      fields: Interface.fieldCatalog,
-    });
-  } else {
-    request.flash('error', "can't find interface!!!");
-    response.redirect(request.get('Referrer') || '/');
-  }
+  const foundInterface = await middleware.findByIdOr404(
+    Interface,
+    request.params.id,
+    response,
+    'Interface',
+    '/interfaces'
+  );
+  if (!foundInterface) return;
+  response.render('interfaces/edit', {
+    interface: foundInterface,
+    device: foundInterface.device,
+    fields: Interface.fieldCatalog,
+  });
 });
 //UPDATE INTERFACE ROUTE
 router.put('/:id', middleware.isLoggedIn, async function (request, response) {
   //find and update the correct DEVICE
 
-  let foundInterface;
-  try {
-    foundInterface = await Interface.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    request.flash('error', 'something went wrong while updating the interface');
-    return response.redirect('/devices/');
-  }
-  const form = request.body.interface;
+  const foundInterface = await middleware.findByIdOr404(
+    Interface,
+    request.params.id,
+    response,
+    'Interface',
+    '/interfaces'
+  );
+  if (!foundInterface) return;
+  const form = request.body.interface || {};
   // legacy input names (name/alias/description/speed) map onto the canonical ones
   for (const [legacy, canonical] of [
     ['name', 'ifName'],
@@ -327,7 +295,14 @@ router.put('/:id', middleware.isLoggedIn, async function (request, response) {
   ]) {
     if (form[legacy] !== undefined && form[canonical] === undefined) form[canonical] = form[legacy];
   }
-  applyFormToInterface(foundInterface, form);
+  const formErrors = applyFormToInterface(foundInterface, form);
+  if (form.ifName !== undefined && String(form.ifName).trim() === '') {
+    formErrors.unshift('ifName is required');
+  }
+  if (formErrors.length) {
+    request.flash('error', formErrors.join('. '));
+    return response.redirect('/interfaces/' + foundInterface._id + '/edit');
+  }
   // the international details only apply to international links
   if (!foundInterface.linkType || foundInterface.linkType.toLowerCase() !== 'international') {
     for (const field of ['provider', 'service', 'linkID', 'subCable', 'teCID', 'termination']) {
@@ -348,7 +323,8 @@ router.put('/:id', middleware.isLoggedIn, async function (request, response) {
   try {
     await foundInterface.save();
   } catch (error) {
-    console.log(error);
+    request.flash('error', middleware.describeError(error));
+    return response.redirect('/interfaces/' + foundInterface._id + '/edit');
   }
   // keep the embedded copy on the containing device in sync
   try {
@@ -356,19 +332,18 @@ router.put('/:id', middleware.isLoggedIn, async function (request, response) {
     for (let i = 0; i < foundDevice.interfaces.length; i++) {
       if (foundDevice.interfaces[i].index == foundInterface.index) {
         foundDevice.interfaces[i] = foundInterface;
-        console.log(foundDevice.interfaces[i]);
         try {
           await Device.updateOne({ _id: foundDevice._id }, foundDevice);
         } catch (error) {
-          console.log(error);
+          logger.error('interface update: embedded copy not updated: ' + error.message);
         }
         break;
       }
     }
-  } catch (error) {
-    request.flash('error', "Can't find containing device");
-    console.log("Can't find containing device");
+  } catch {
+    request.flash('warning', "Can't find the containing device");
   }
-  response.redirect('/devices/');
+  request.flash('success', 'Interface updated');
+  response.redirect('/interfaces/' + foundInterface._id);
 });
 module.exports = router;
