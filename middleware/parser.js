@@ -30,7 +30,7 @@ let link = {
 const parserObj = {};
 parserObj.parseIfAlias = function (alias) {
   // # International link: Any link connects between TE Data GW to providers GW, identifier: INT
-  // #Example: INT-IPT-TINET-ALX-10G-B5-L10-ALX_MRM_10GE_LAN PHY_017_M-SM4_IPT_10G_0007-SMW4
+  // #Example: INT-IPT-TINET-COR-10G-B5-L10-COR_MRM_10GE_LAN PHY_017_M-SM4_IPT_10G_0007-SMW4
   // #Example: INT-Service type-Provider name-Local termination-Link type-Bundle No.-Link No.-INT CID-TE CID-Submarine cable
 
   let linkType = '',
@@ -139,7 +139,7 @@ parserObj.parseIfAlias = function (alias) {
     // Example: ESP-BM-ABASIA-L2VPN-45424-512
     // ESP: ESP link
     // Customer name: BM, Borsa, ABB, etc
-    // POP name: Destination POP (ABASIA, GIZA, RAMSIS, etc)
+    // POP name: Destination POP (ABASIA, GALWAY, RAMSIS, etc)
     // Connection type: L2VPN, L3VPN, INT, BR
     // EMS Order number: 125454, 125985, etc
     // Contacted BW (in Mbps): 0.25, 0.5, 1, 155, etc
@@ -187,23 +187,23 @@ parserObj.parseIfAlias = function (alias) {
 };
 
 parserObj.parseHostname = async function (hostname) {
-  //hostname format: <PARENT_POP_ACRONYM>-<DEVICE_TYPE><2_DIGIT_NUMBER><DEVICE_VENDOR>-<GOVERNORATE_ACRONYM>-EG
+  //hostname format: <PARENT_POP_ACRONYM>-<DEVICE_TYPE><2_DIGIT_NUMBER><DEVICE_VENDOR>-<COUNTY_ACRONYM>-IR
   if (S(hostname).isEmpty()) return null;
   const nameFields = S(hostname).trim().splitLeft('-');
   let deviceDetails;
   let popName;
-  let popGove;
+  let popCty;
   let deviceType = null;
   let deviceVendor = null;
   if (nameFields.length == 4) {
     popName = nameFields[0];
-    popGove = nameFields[2];
+    popCty = nameFields[2];
     if (S(nameFields[1]).isAlphaNumeric() && S(nameFields[1]).length == 4) {
       deviceType = enrichmentData.deviceType[S(nameFields[1]).left(1).s];
       deviceVendor = enrichmentData.deviceVendor[S(nameFields[1]).right(1).s];
       deviceDetails = {
         popName: popName,
-        popGove: popGove,
+        popCty: popCty,
         deviceType: deviceType,
         deviceVendor: deviceVendor,
       };
@@ -212,16 +212,16 @@ parserObj.parseHostname = async function (hostname) {
       logger.error('device ' + hostname + " name doesn't adhere to naming rules");
     }
     try {
-      const foundPOP = await POP.findOne({ governorateAcro: popGove });
+      const foundPOP = await POP.findOne({ countyAcro: popCty });
       if (foundPOP != null) {
         deviceDetails = {
           popName: foundPOP.name,
-          popGove: popGove,
+          popCty: popCty,
           deviceType: deviceType,
           deviceVendor: deviceVendor,
         };
       } else {
-        logger.error("Can't find POP " + popGove + ' while exporting enrichment data');
+        logger.error("Can't find POP " + popCty + ' while exporting enrichment data');
       }
     } catch (error) {
       logger.error(error);

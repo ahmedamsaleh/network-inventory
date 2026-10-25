@@ -71,28 +71,27 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
 
 //SHOW SECTOR ROUTE
 router.get('/:id', middleware.isLoggedIn, async function (request, response) {
-  //find SECTOR with provided id
-  let foundSector;
-  try {
-    foundSector = await Sector.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  //render show template with that SECTOR
+  const foundSector = await middleware.findByIdOr404(
+    Sector,
+    request.params.id,
+    response,
+    'Sector',
+    '/sectors'
+  );
+  if (!foundSector) return;
   response.render('sectors/show', { sector: foundSector });
 });
 
 //EDIT SECTOR ROUTE
 router.get('/:id/edit', async function (request, response) {
-  //is user logged in?
-  console.log('Update a SECTOR');
-  let foundSector;
-  try {
-    foundSector = await Sector.findById(request.params.id);
-  } catch (error) {
-    foundSector = undefined;
-  }
+  const foundSector = await middleware.findByIdOr404(
+    Sector,
+    request.params.id,
+    response,
+    'Sector',
+    '/sectors'
+  );
+  if (!foundSector) return;
   response.render('sectors/edit', { sector: foundSector });
 });
 //UPDATE SECTOR ROUTE

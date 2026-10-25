@@ -60,28 +60,27 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
 });
 //SHOW LINK ROUTE
 router.get('/:id', middleware.isLoggedIn, async function (request, response) {
-  //find Link with provided id
-  let foundLink;
-  try {
-    foundLink = await Link.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  //render show template with that Link
+  const foundLink = await middleware.findByIdOr404(
+    Link,
+    request.params.id,
+    response,
+    'Link',
+    '/links'
+  );
+  if (!foundLink) return;
   response.render('links/show', { link: foundLink });
 });
 
 //EDIT LINK ROUTE
 router.get('/:id/edit', async function (request, response) {
-  //is user logged in?
-  console.log('Update a Link');
-  let foundLink;
-  try {
-    foundLink = await Link.findById(request.params.id);
-  } catch (error) {
-    foundLink = undefined;
-  }
+  const foundLink = await middleware.findByIdOr404(
+    Link,
+    request.params.id,
+    response,
+    'Link',
+    '/links'
+  );
+  if (!foundLink) return;
   response.render('links/edit', { link: foundLink });
 });
 //UPDATE LINK ROUTE

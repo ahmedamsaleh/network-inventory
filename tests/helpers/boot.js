@@ -43,10 +43,20 @@ function waitFor(fn, timeoutMs, what) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** credentials of the admin account the app creates at startup */
+const ADMIN = { email: 'admin@example.com', password: 'admin-test-password' };
+
 async function bootApp() {
   const port = await getFreePort();
 
+  // never load a developer's .env into the tests
+  process.env.DOTENV_CONFIG_PATH = path.join(__dirname, 'no-such.env');
+  delete process.env.MONGO_URL;
+  delete process.env.EMBEDDED_MONGO;
   process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
+  // administrator account ensured by the app at startup (services/adminAccount.js)
+  process.env.ADMIN_EMAIL = ADMIN.email;
+  process.env.ADMIN_PASSWORD = ADMIN.password;
   process.env.IP = '127.0.0.1';
   process.env.PORT = String(port);
   process.env.DEV_DB =
@@ -84,7 +94,7 @@ async function bootApp() {
       Interface: mongoose.model('Interface'),
       POP: mongoose.model('POP'),
       Sector: mongoose.model('Sector'),
-      Governorate: mongoose.model('Governorate'),
+      County: mongoose.model('County'),
       Link: mongoose.model('Link'),
       Enrichment: mongoose.model('Enrichment'),
     },
@@ -139,6 +149,11 @@ async function loginAgent(app, { email, password }) {
   return agent;
 }
 
+/** logged-in supertest agent for the startup-created admin account */
+async function adminAgent(app) {
+  return loginAgent(app, ADMIN);
+}
+
 /** signup + verify + login in one go */
 async function authedAgent(app, creds) {
   const defaults = { name: 'Test User', email: 'tester@example.com', password: 'secret123' };
@@ -148,4 +163,4 @@ async function authedAgent(app, creds) {
   return { agent, user: dbUser, creds: user };
 }
 
-module.exports = { bootApp, authedAgent, signupVerifiedUser, loginAgent, sleep };
+module.exports = { bootApp, authedAgent, adminAgent, signupVerifiedUser, loginAgent, sleep, ADMIN };

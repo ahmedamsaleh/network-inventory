@@ -3,7 +3,7 @@
  *
  * Current-behavior notes (asserted below):
  *  - POST /pops stores name/shortName/district + author, but the values the
- *    new-POP form submits for `pop[governorateAcro]` and `pop[sector]` are
+ *    new-POP form submits for `pop[countyAcro]` and `pop[sector]` are
  *    plain strings while the schema expects nested objects, so they are
  *    silently dropped.
  *  - Edit form, update and delete are NOT protected by isLoggedIn.
@@ -31,7 +31,9 @@ describe('POP CRUD (authenticated)', () => {
   test('INDEX: GET /pops renders the list', async () => {
     await app.models.POP.create({ name: 'Preexisting-POP', shortName: 'PRE' });
     const res = await agent.get('/pops').expect(200);
-    expect(res.text).toContain('Preexisting-POP');
+    expect(res.text).toContain('data-url="/pops/pagination"');
+    const json = await agent.get('/pops/pagination').expect(200);
+    expect(json.body.rows.map((r) => r.name)).toContain('Preexisting-POP');
   });
 
   test('NEW: GET /pops/new renders the form', async () => {
@@ -44,48 +46,54 @@ describe('POP CRUD (authenticated)', () => {
       .post('/pops')
       .type('form')
       .send(
-        'pop[name]=Zamalek&pop[shortName]=ZMK&pop[governorateAcro]=GZ&pop[district]=West&pop[sector]=S1'
+        'pop[name]=Howth&pop[shortName]=HWT&pop[countyAcro]=GAL&pop[district]=West&pop[sector]=S1'
       )
       .expect(302)
       .expect('location', '/pops');
 
-    const pop = await app.models.POP.findOne({ name: 'Zamalek' });
+    const pop = await app.models.POP.findOne({ name: 'Howth' });
     expect(pop).not.toBeNull();
     popId = String(pop._id);
-    expect(pop.shortName).toBe('ZMK');
+    expect(pop.shortName).toBe('HWT');
     expect(pop.district).toBe('West');
     expect(pop.author.email).toBe(user.email);
     expect(String(pop.author.id)).toBe(String(user._id));
-    // ODD: the form's governorateAcro/sector strings cannot be cast to the
+    // ODD: the form's countyAcro/sector strings cannot be cast to the
     // nested {id, acronym}/{id, name} schema paths and are silently lost.
-    expect(pop.toObject().governorateAcro).toBeUndefined();
+    expect(pop.toObject().countyAcro).toBeUndefined();
     expect(pop.toObject().sector).toBeUndefined();
   });
 
   test('SHOW: GET /pops/:id renders the pop', async () => {
     const res = await agent.get('/pops/' + popId).expect(200);
-    expect(res.text).toContain('Zamalek');
+    expect(res.text).toContain('Howth');
   });
 
-  test('SHOW: GET /pops/:id with a non-existent (but valid) id responds 500', async () => {
-    await agent.get('/pops/' + new app.mongoose.Types.ObjectId()).expect(500);
+  test('SHOW/EDIT: non-existent or malformed ids respond 404 (not-found page)', async () => {
+    const missing = new app.mongoose.Types.ObjectId();
+    const res = await agent.get('/pops/' + missing).expect(404);
+    expect(res.text).toContain('POP ');
+    expect(res.text).toContain(String(missing) + '&#34; does not exist');
+    await agent.get('/pops/' + missing + '/edit').expect(404);
+    await agent.get('/pops/not-an-object-id').expect(404); // used to hang forever
+    await agent.get('/pops/not-an-object-id/edit').expect(404);
   });
 
   test('EDIT: GET /pops/:id/edit renders the form', async () => {
     const res = await agent.get('/pops/' + popId + '/edit').expect(200);
-    expect(res.text).toContain('Zamalek');
+    expect(res.text).toContain('Howth');
   });
 
   test('UPDATE: PUT /pops/:id updates and redirects to the show page', async () => {
     await agent
       .put('/pops/' + popId)
       .type('form')
-      .send('pop[name]=Zamalek-2&pop[shortName]=ZM2&pop[district]=East')
+      .send('pop[name]=Howth-2&pop[shortName]=HW2&pop[district]=East')
       .expect(302)
       .expect('location', '/pops/' + popId);
     const pop = await app.models.POP.findById(popId);
-    expect(pop.name).toBe('Zamalek-2');
-    expect(pop.shortName).toBe('ZM2');
+    expect(pop.name).toBe('Howth-2');
+    expect(pop.shortName).toBe('HW2');
     expect(pop.district).toBe('East');
   });
 
@@ -93,19 +101,19 @@ describe('POP CRUD (authenticated)', () => {
     await agent
       .post('/pops/' + popId + '?_method=PUT')
       .type('form')
-      .send('pop[name]=Zamalek-3')
+      .send('pop[name]=Howth-3')
       .expect(302)
       .expect('location', '/pops/' + popId);
-    expect((await app.models.POP.findById(popId)).name).toBe('Zamalek-3');
+    expect((await app.models.POP.findById(popId)).name).toBe('Howth-3');
   });
 
-  test('PAGINATION: GET /pops/pagination returns JSON with names only', async () => {
+  test('PAGINATION: GET /pops/pagination returns bootstrap-table {total, rows}', async () => {
     const res = await agent.get('/pops/pagination').expect(200).expect('content-type', /json/);
-    expect(res.body).toMatchObject({ limit: 5000 });
-    expect(Array.isArray(res.body.docs)).toBe(true);
-    const names = res.body.docs.map((d) => d.name);
-    expect(names).toContain('Zamalek-3');
-    expect(res.body.docs[0].shortName).toBeUndefined(); // select: 'name'
+    expect(typeof res.body.total).toBe('number');
+    expect(Array.isArray(res.body.rows)).toBe(true);
+    const row = res.body.rows.find((r) => r.name === 'Howth-3');
+    expect(row).toMatchObject({ id: popId, _id: popId, acronym: 'HW2', district: 'East' });
+    expect(row.shortName).toBeUndefined(); // flat rows with the displayed names only
   });
 
   test('DESTROY: DELETE /pops/:id removes the pop', async () => {

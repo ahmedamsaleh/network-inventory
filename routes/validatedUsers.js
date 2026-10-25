@@ -54,30 +54,29 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
   response.redirect('/validatedusers');
 });
 
-//SHOW Validated User ROUTE
+//SHOW VALIDATED USER ROUTE
 router.get('/:id', middleware.isLoggedIn, async function (request, response) {
-  //find Validated User with provided id
-  let foundUser;
-  try {
-    foundUser = await ValidatedUser.findById(request.params.id);
-  } catch (error) {
-    console.log(error);
-    return;
-  }
-  //render show template with that Validated User
+  const foundUser = await middleware.findByIdOr404(
+    ValidatedUser,
+    request.params.id,
+    response,
+    'Validated user',
+    '/validatedusers'
+  );
+  if (!foundUser) return;
   response.render('validatedusers/show', { user: foundUser });
 });
 
 //EDIT VALIDATED USER ROUTE
 router.get('/:id/edit', async function (request, response) {
-  //is user logged in?
-  console.log('Update a VALIDATED USER');
-  let foundUser;
-  try {
-    foundUser = await ValidatedUser.findById(request.params.id);
-  } catch (error) {
-    foundUser = undefined;
-  }
+  const foundUser = await middleware.findByIdOr404(
+    ValidatedUser,
+    request.params.id,
+    response,
+    'Validated user',
+    '/validatedusers'
+  );
+  if (!foundUser) return;
   response.render('validatedusers/edit', { user: foundUser });
 });
 //UPDATE VALIDATED USER ROUTE

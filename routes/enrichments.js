@@ -69,7 +69,7 @@ async function exportEnrichment() {
       }
       deviceDoc.B_TED_Elt_IP = S(device.ipaddress).s;
       deviceDoc.B_TED_Elt_Model = S(device.model).s;
-      deviceDoc.B_TED_Elt_POP_Gov = deviceDetails.popGove;
+      deviceDoc.B_TED_Elt_POP_Cty = deviceDetails.popCty;
       deviceDoc.B_TED_Elt_POP_Name = deviceDetails.popName;
       deviceDoc.B_TED_Elt_Type = deviceDetails.deviceType;
       deviceDoc.B_TED_Elt_Vendor = deviceDetails.deviceVendor;
@@ -98,7 +98,7 @@ async function exportEnrichment() {
         doc.B_TED_ifDescrSt = interface.alias;
         doc.B_TED_Elt_IP = S(device.ipaddress).s;
         doc.B_TED_Elt_Model = S(device.model).s;
-        doc.B_TED_Elt_POP_Gov = deviceDetails.popGove;
+        doc.B_TED_Elt_POP_Cty = deviceDetails.popCty;
         doc.B_TED_Elt_POP_Name = deviceDetails.popName;
         doc.B_TED_Elt_Type = deviceDetails.deviceType;
         doc.B_TED_Elt_Vendor = deviceDetails.deviceVendor;

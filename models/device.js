@@ -28,16 +28,28 @@ const validIP = function (val) {
   return false;
 };
 
+// default for the descriptive fields below (spelling kept as specified: 'Unkown')
+const UNKNOWN = 'Unkown';
+
 //Database template setup
 const deviceSchema = new mongoose.Schema({
   // hostname: {type: String, required: [true, 'Hostname is required'], validate: hostnameValidator},
   hostname: String,
   ipaddress: String,
+  // SNMP community (DEFAULT_SNMP_COMMUNITY or 'public'); `communityString` is the
+  // legacy name of the same value and is kept in sync by the routes
+  community: { type: String, default: config.snmp.defaultCommunity },
   communityString: { type: String, default: config.snmp.defaultCommunity },
   createdAt: { type: Date, default: Date.now },
   updatedAt: Date,
+  lastSyncTime: Date,
   description: String,
+  // SNMP system group (populated by discovery/sync)
+  sysDescr: String,
+  sysObjectID: String,
+  sysName: String,
   discovered: { type: Boolean, default: false }, //used to mark device as discovered, useful during sync process
+  deviceSyncCycles: { type: Number, default: 0 },
   defaultCollector: { type: Number, default: 1 },
   popName: {
     id: {
@@ -53,13 +65,13 @@ const deviceSchema = new mongoose.Schema({
       //ref is the name of the model
       ref: 'Sector',
     },
-    name: String,
+    name: { type: String, default: UNKNOWN },
   },
-  governorate: {
+  county: {
     id: {
       type: mongoose.Schema.Types.ObjectId,
       //ref is the name of the model
-      ref: 'Governorate',
+      ref: 'County',
     },
     name: String,
   },
@@ -80,6 +92,18 @@ const deviceSchema = new mongoose.Schema({
   type: String,
   model: String,
   vendor: String,
+  // location / site information
+  pop: String,
+  popLongName: { type: String, default: UNKNOWN },
+  cabinet: { type: String, default: UNKNOWN },
+  cty: { type: String, default: UNKNOWN },
+  district: { type: String, default: UNKNOWN },
+  popType: { type: String, default: UNKNOWN },
+  // BT (bitstream) reference data
+  btMSANCode: String,
+  btMngIP: String,
+  btSector: String,
+  btDistrict: String,
   interfaces: [Interface.schema],
   // interfaces: [
   //         {
@@ -92,6 +116,28 @@ const deviceSchema = new mongoose.Schema({
   //         }
   //     ]
 });
+deviceSchema.index({ hostname: 1 }, { unique: true });
+deviceSchema.index({ ipaddress: 1 });
+
+// free-text fields the create/update forms may set (all trimmed by the routes)
+deviceSchema.statics.editableTextFields = [
+  'description',
+  'community',
+  'type',
+  'model',
+  'vendor',
+  'pop',
+  'popLongName',
+  'cabinet',
+  'cty',
+  'district',
+  'popType',
+  'btMSANCode',
+  'btMngIP',
+  'btSector',
+  'btDistrict',
+];
+
 deviceSchema.path('hostname').validate(hostnameEmpty, "hostname can't be empty!");
 deviceSchema.path('hostname').validate(hostnameLength, 'hostname is too short!');
 deviceSchema.path('ipaddress').validate(ipaddressEmpty, "IP Address can't be empty!");

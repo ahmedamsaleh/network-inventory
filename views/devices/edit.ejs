@@ -17,8 +17,12 @@
                     <input class="form-control" type="text" name="device[ipaddress]" value="<%= device.ipaddress %>" readonly>
                 </div>
                 <div class="form-group">
-                    <label for="communityString">Community String</label>
-                    <input class="form-control" type="text" name="device[communityString]" value="<%= device.communityString %>">
+                    <label for="community">SNMP Community</label>
+                    <input class="form-control" type="text" name="device[community]" value="<%= device.community %>">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input class="form-control" type="text" name="device[description]" value="<%= device.description %>">
                 </div>
                 <div class="form-group">
                     <label for="defaultCollector">Default Collector</label>
@@ -40,12 +44,12 @@
                     <%   } %>
                 </div>
                 <div class="form-group">
-                    <label for="device-governorate-name">Governorate Name</label>
-                    <% if(device.governorate.name === undefined){ %>
-                    <select id="device-governorate-name" class="form-control select2-single" type="text" name="device[governorate][name]"  value="<%= device.governorate.name %>" >
+                    <label for="device-county-name">County Name</label>
+                    <% if(device.county.name === undefined){ %>
+                    <select id="device-county-name" class="form-control select2-single" type="text" name="device[county][name]"  value="<%= device.county.name %>" >
                     </select>
                     <% } else {%>
-                    <select id="device-governorate-name" class="form-control select2-single" type="text" name="device[governorate][name]"  data-init-text="<%= device.governorate.name %>" >
+                    <select id="device-county-name" class="form-control select2-single" type="text" name="device[county][name]"  data-init-text="<%= device.county.name %>" >
                     </select>
                     <% } %>
                 </div>
@@ -66,6 +70,55 @@
                 <div class="form-group">
                     <label for="vendor">Vendor</label>
                     <input class="form-control" type="text" name="device[vendor]" value="<%= device.vendor %>">
+                </div>
+                <div class="form-group">
+                    <label for="pop">POP (short code)</label>
+                    <input class="form-control" type="text" name="device[pop]" value="<%= device.pop %>">
+                </div>
+                <div class="form-group">
+                    <label for="popLongName">POP Long Name</label>
+                    <input class="form-control" type="text" name="device[popLongName]" value="<%= device.popLongName %>">
+                </div>
+                <div class="form-group">
+                    <label for="popType">POP Type</label>
+                    <input class="form-control" type="text" name="device[popType]" value="<%= device.popType %>">
+                </div>
+                <div class="form-group">
+                    <label for="cabinet">Cabinet</label>
+                    <input class="form-control" type="text" name="device[cabinet]" value="<%= device.cabinet %>">
+                </div>
+                <div class="form-group">
+                    <label for="cty">County (code)</label>
+                    <input class="form-control" type="text" name="device[cty]" value="<%= device.cty %>">
+                </div>
+                <div class="form-group">
+                    <label for="district">District</label>
+                    <input class="form-control" type="text" name="device[district]" value="<%= device.district %>">
+                </div>
+                <div class="form-group">
+                    <label for="btMSANCode">BT MSAN Code</label>
+                    <input class="form-control" type="text" name="device[btMSANCode]" value="<%= device.btMSANCode %>">
+                </div>
+                <div class="form-group">
+                    <label for="btMngIP">BT Management IP</label>
+                    <input class="form-control" type="text" name="device[btMngIP]" value="<%= device.btMngIP %>">
+                </div>
+                <div class="form-group">
+                    <label for="btSector">BT Sector</label>
+                    <input class="form-control" type="text" name="device[btSector]" value="<%= device.btSector %>">
+                </div>
+                <div class="form-group">
+                    <label for="btDistrict">BT District</label>
+                    <input class="form-control" type="text" name="device[btDistrict]" value="<%= device.btDistrict %>">
+                </div>
+                <div class="form-group">
+                    <label>Discovery (read only)</label>
+                    <p class="form-control-static">
+                        sysName: <%= device.sysName %><br>
+                        sysObjectID: <%= device.sysObjectID %><br>
+                        sysDescr: <%= device.sysDescr %><br>
+                        last sync: <%= device.lastSyncTime ? device.lastSyncTime.toLocaleString() : '' %> (cycles: <%= device.deviceSyncCycles %>)
+                    </p>
                 </div>
                 <div class="form-group">
                     <!--<btn-block will let the button takes width of the 2 inputs>-->

@@ -1,13 +1,23 @@
 //require
 const express = require('express'),
-  mongoose = require('mongoose'),
   flash = require('connect-flash'),
   passport = require('passport'),
-  methodOverride = require('method-override'),
-  config = require('./config'),
-  User = require('./models/user'),
+  methodOverride = require('method-override');
+
+// configuration problems are reported as one readable line, not a stack trace
+let config;
+try {
+  config = require('./config');
+} catch (error) {
+  console.error('Configuration error: ' + error.message);
+  process.exit(1);
+}
+
+const User = require('./models/user'),
   logger = require('./middleware/logger'); //logging component
 // deleteLogger           = require('./middleware/deleteLogger'),//logging component
+const database = require('./services/database');
+const adminAccount = require('./services/adminAccount');
 const fileUpload = require('express-fileupload');
 const MongoStore = require('connect-mongo').MongoStore;
 
@@ -17,7 +27,7 @@ const CronJob = require('cron').CronJob;
 const interfaceRoutes = require('./routes/interfaces'),
   popRoutes = require('./routes/pops'),
   sectorRoutes = require('./routes/sectors'),
-  governorateRoutes = require('./routes/governorates'),
+  countyRoutes = require('./routes/counties'),
   linkRoutes = require('./routes/links'),
   userRoutes = require('./routes/users'),
   validatedUserRoutes = require('./routes/validatedUsers'),
@@ -28,7 +38,7 @@ const interfaceRoutes = require('./routes/interfaces'),
 const indexBaseURL = '/',
   popBaseURL = '/pops',
   sectorBaseURL = '/sectors',
-  governorateBaseURL = '/governorates',
+  countyBaseURL = '/counties',
   linkBaseURL = '/links',
   userBaseURL = '/users',
   validatedUserBaseURL = '/validatedusers',
@@ -50,9 +60,12 @@ app.use(methodOverride('_method'));
 app.use(flash());
 
 app.use(express.urlencoded({ extended: true }));
-mongoose.connect(config.mongoUrl).catch(function (error) {
-  logger.error(error);
-});
+// Connect to MongoDB first; the HTTP server only starts once the database is
+// reachable (see start() at the bottom). A failed connection ends the process
+// with a clear message instead of an unhandled rejection 30 seconds later.
+const databaseReady = database.connect();
+// the rejection is handled in start(); this only keeps Node from reporting it
+databaseReady.catch(function () {});
 //seedDB();
 
 //Passport configuration
@@ -63,11 +76,7 @@ app.use(
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-      clientPromise: mongoose.connection.asPromise().then(function (connection) {
-        return connection.getClient();
-      }),
-    }),
+    store: MongoStore.create({ clientPromise: databaseReady }),
   })
 );
 app.use(fileUpload());
@@ -92,7 +101,7 @@ app.use(deviceBaseURL, deviceRoutes);
 app.use(interfaceBaseURL, interfaceRoutes);
 app.use(popBaseURL, popRoutes);
 app.use(sectorBaseURL, sectorRoutes);
-app.use(governorateBaseURL, governorateRoutes);
+app.use(countyBaseURL, countyRoutes);
 app.use(userBaseURL, userRoutes);
 app.use(linkBaseURL, linkRoutes);
 app.use(validatedUserBaseURL, validatedUserRoutes);
@@ -136,14 +145,47 @@ new CronJob(
 logger.info('new message');
 // deleteLogger.delete("device deleted");
 
-app.listen(config.port, config.ip, function () {
-  console.log(
-    'Network Inventory V' +
-      applicationVersion +
-      ' Server Started on ' +
-      config.ip +
-      ':' +
-      config.port
-  );
-  console.log('current time is: ' + new Date());
-});
+async function start() {
+  try {
+    await databaseReady;
+  } catch (error) {
+    logger.error(error.message);
+    process.exit(1);
+  }
+  try {
+    await adminAccount.ensureAdminAccount();
+  } catch (error) {
+    logger.error('could not ensure the admin account: ' + error.message);
+  }
+  const server = app.listen(config.port, config.ip, function () {
+    console.log(
+      'Network Inventory V' +
+        applicationVersion +
+        ' Server Started on ' +
+        config.ip +
+        ':' +
+        config.port
+    );
+    console.log('current time is: ' + new Date());
+  });
+
+  // graceful shutdown: stop accepting requests, close the database (and the
+  // embedded MongoDB, if one was started), then exit
+  let shuttingDown = false;
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info('received ' + signal + ', shutting down');
+    server.close();
+    try {
+      await database.disconnect();
+    } catch (error) {
+      logger.error(error);
+    }
+    process.exit(0);
+  }
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+start();

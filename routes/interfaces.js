@@ -3,65 +3,143 @@ const router = express.Router({ mergeParams: true });
 const Device = require('../models/device');
 const Interface = require('../models/interface');
 const middleware = require('../middleware');
-const logger = require('../middleware/logger');
+const pagination = require('../services/pagination');
 
-//INDEX - show all interfaces
-router.get('/', middleware.isLoggedIn, async function (request, response) {
-  let foundInterfaces;
-  try {
-    foundInterfaces = await Interface.find({});
-  } catch (err) {
-    logger.error(err);
-    return;
-  }
-  response.render('interfaces/index', { interfaces: foundInterfaces });
-  // response.send("VIEW Interfaces");
+// bootstrap-table server-side pagination: GET /interfaces/pagination?limit&offset&search&sort&order
+const interfacePaginationSpec = {
+  Model: Interface,
+  searchFields: [
+    'name',
+    'alias',
+    'description',
+    'type',
+    'device.hostname',
+    'device.ipaddress',
+    'secondHost',
+    'secondPOP',
+    'connectionType',
+    'linkType',
+  ],
+  sortable: {
+    index: 'index',
+    name: 'name',
+    device: 'device.hostname',
+    alias: 'alias',
+    type: 'type',
+    speed: 'speed',
+    adminStatus: 'adminStatus',
+    operStatus: 'operStatus',
+    actualspeed: 'actualspeed',
+    isDeviceUpLink: 'isDeviceUpLink',
+    delete: 'delete',
+    created: 'created',
+    updated: 'updated',
+  },
+  defaultSort: 'device',
+  // only what views/interfaces/index.ejs displays
+  projection: {
+    index: 1,
+    name: 1,
+    'device.hostname': 1,
+    alias: 1,
+    description: 1,
+    type: 1,
+    speed: 1,
+    adminStatus: 1,
+    operStatus: 1,
+    actualspeed: 1,
+    isDeviceUpLink: 1,
+    delete: 1,
+    'author.email': 1,
+    'lastUpdatedBy.email': 1,
+    created: 1,
+    updated: 1,
+  },
+  mapRow: function (intf) {
+    return {
+      _id: String(intf._id),
+      index: intf.index,
+      name: intf.name,
+      device: intf.device && intf.device.hostname,
+      alias: intf.alias,
+      description: intf.description,
+      type: intf.type,
+      speed: intf.speed,
+      adminStatus: intf.adminStatus,
+      operStatus: intf.operStatus,
+      actualspeed: intf.actualspeed,
+      isDeviceUpLink: intf.isDeviceUpLink,
+      delete: intf.delete,
+      createdBy: intf.author && intf.author.email,
+      updatedBy: intf.lastUpdatedBy && intf.lastUpdatedBy.email,
+      created: intf.created,
+      updated: intf.updated,
+    };
+  },
+};
+router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
+  response.json(await pagination.paginatedResponse(request.query, interfacePaginationSpec));
 });
 
-//Add Route for NEW interface linked with device
+//INDEX - the interface list is loaded by the table from /interfaces/pagination
+router.get('/', middleware.isLoggedIn, function (request, response) {
+  response.render('interfaces/index');
+});
+
+// the router is mounted at /interfaces, so the owning device is identified by
+// ?device=<id> (new form) or the form's hidden interface[device][id] (create)
 //NEW ROUTE for new interface
 router.get('/new', middleware.isLoggedIn, async function (request, response) {
-  let foundDevice;
-  try {
-    foundDevice = await Device.findById(request.params.id);
-  } catch (error) {
-    console.log('add new interface error: ' + error);
+  const deviceId = request.query.device || request.params.id;
+  if (!deviceId) {
+    request.flash('error', 'Choose the device the interface belongs to');
     return response.redirect('/devices');
   }
+  const foundDevice = await middleware.findByIdOr404(
+    Device,
+    deviceId,
+    response,
+    'Device',
+    '/devices'
+  );
+  if (!foundDevice) return;
   response.render('interfaces/new', { device: foundDevice });
 });
 
 //CREATE ROUTE for new interface
 router.post('/', middleware.isLoggedIn, async function (request, response) {
-  // console.log(request);
   //lookup device using ID
-  let foundDevice;
+  const anInterface = request.body.interface || {};
+  const deviceId = (anInterface.device && anInterface.device.id) || request.params.id;
+  let foundDevice = null;
   try {
-    foundDevice = await Device.findById(request.params.id);
+    foundDevice = deviceId ? await Device.findById(deviceId) : null;
   } catch (error) {
-    console.log(error);
-    request.flash('error', 'Something went wrong');
+    if (error.name !== 'CastError') throw error;
+  }
+  if (!foundDevice) {
+    request.flash('error', 'Cannot add the interface: device not found');
     return response.redirect('/devices');
   }
-  //create new interface
-  const anInterface = request.body.interface;
-
+  //create new interface (linked to the device) with the current user as author
+  anInterface.device = {
+    id: foundDevice._id,
+    hostname: foundDevice.hostname,
+    ipaddress: foundDevice.ipaddress,
+  };
+  anInterface.author = { id: request.user._id, email: request.user.email };
   let createdInterface;
   try {
     createdInterface = await Interface.create(anInterface);
   } catch (error) {
     console.log(error);
-    return;
+    request.flash('error', 'Something went wrong: ' + error.message);
+    return response.redirect('/devices/' + foundDevice._id);
   }
-  //add user and id to interface
-  createdInterface.author.email = request.user.email;
-  createdInterface.author.id = request.user._id;
-  //save interface
-  await createdInterface.save();
-  console.log('interface from user- ' + request.user.username + ' is: ' + createdInterface);
-  //connect new interface to device
-  foundDevice.interfaces.push(createdInterface);
-  await foundDevice.save();
+  console.log('interface from user- ' + request.user.email + ' is: ' + createdInterface);
+  //connect new interface to device (atomic push: a full save() would re-run the
+  //hostname/ip uniqueness validators against the device itself)
+  await Device.findByIdAndUpdate(foundDevice._id, { $push: { interfaces: createdInterface } });
   //redirect device show page
   request.flash('success', 'Successfully added Interface');
   response.redirect('/devices/' + foundDevice._id);
