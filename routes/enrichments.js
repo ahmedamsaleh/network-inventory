@@ -6,7 +6,7 @@ const Device = require('../models/device');
 const middleware = require('../middleware');
 const importEnrichment = require('../middleware/import_enrichment');
 const logger = require('../middleware/logger'); //logging component
-const linkParser = require('../middleware/parser');
+const linkParser = require('../middleware/parser/parser');
 const enrichmentData = require('../lookUps/enrich');
 const fs = require('fs');
 const config = require('../config');
@@ -63,7 +63,7 @@ async function exportEnrichment() {
         }
       }
 
-      const deviceDetails = await linkParser.parseHostname(deviceDoc.B_TED_Elt_Device);
+      const deviceDetails = linkParser.parseHostname(deviceDoc.B_TED_Elt_Device);
       if (deviceDetails == null) {
         continue;
       }
@@ -88,8 +88,8 @@ async function exportEnrichment() {
         }
         parsedInterfaces.push(interface.name);
         const link = linkParser.parseIfAlias(interface.alias);
-        if (link == null) {
-          continue;
+        if (!link.pattern) {
+          continue; // alias does not follow any of the naming rules
         }
         const doc = new Enrichment();
         doc.B_TED_Elt_Device = S(device.hostname).s;
@@ -103,7 +103,7 @@ async function exportEnrichment() {
         doc.B_TED_Elt_Type = deviceDetails.deviceType;
         doc.B_TED_Elt_Vendor = deviceDetails.deviceVendor;
         doc.SE_Name = S(device.hostname).s + '_if<' + interface.index + '>';
-        doc.B_TED_linkType = link.linkType;
+        doc.B_TED_linkType = link.link.specialService;
         //B_TED_Label = B_TED_Elt_Device+" IF: "+ifIndex+" "+B_TED_linkBw+" "+ifDesc+" to "+ifAlias
         doc.B_TED_Label = doc.B_TED_Elt_Device + ' IF: ' + interface.index + ' ';
         if (!S(doc.B_TED_linkBw).isEmpty() && parseInt(S(doc.B_TED_linkBw)) > 1000) {
@@ -125,26 +125,28 @@ async function exportEnrichment() {
         }
 
         if (doc.B_TED_linkType == 'International') {
-          doc.B_TED_service = link.service;
-          doc.B_TED_provider = link.provider;
+          // export conventions kept from the previous parser
+          const serviceNames = { IPT: 'SRV-IPT', LP: 'SRV-LP' };
+          doc.B_TED_service = link.service ? serviceNames[link.service] || link.service : 'NA';
+          doc.B_TED_provider = link.provider || 'NA';
           doc.B_TED_termination = link.termination;
           doc.B_TED_connType = link.connType;
-          doc.B_TED_bundleId = link.bundelID;
-          doc.B_TED_linkId = link.linkID;
-          doc.B_TED_intCID = link.intCID;
-          doc.B_TED_teCID = link.teCID;
-          doc.B_TED_subCable = link.subCable;
+          doc.B_TED_bundleId = link.bundleId;
+          doc.B_TED_linkId = link.linkNumber;
+          doc.B_TED_intCID = link.CID;
+          doc.B_TED_teCID = link.BTCID;
+          doc.B_TED_subCable = link.subCable || 'NA';
           doc.B_TED_isDeviceUplink = false;
           doc.B_TED_isPopUplink = false;
-        } else if (doc.B_TED_linkType == 'BITSTREAM') {
+        } else if (doc.B_TED_linkType == 'Bitstream') {
           doc.B_TED_Customer = link.customer;
         }
-        if (link.isESP == '1') {
-          doc.B_TED_esp_customer = link.espCustomer;
-          doc.B_TED_esp_conntype = link.espConnType;
-          doc.B_TED_esp_order = link.espEmsOrder;
-          doc.B_TED_esp_bw = link.espBW;
-          doc.B_TED_esp_pop = link.espPop;
+        if (doc.B_TED_linkType == 'ESP') {
+          doc.B_TED_esp_customer = link.customer;
+          doc.B_TED_esp_conntype = link.connType;
+          doc.B_TED_esp_order = link.emsOrder;
+          doc.B_TED_esp_bw = link.connectedBW;
+          doc.B_TED_esp_pop = link.pop;
           doc.B_TED_esp_if = '1';
           if (!S(doc.B_TED_esp_bw).isEmpty() && parseInt(S(doc.B_TED_esp_bw)) > 0) {
             doc.B_TED_linkBw = doc.B_TED_esp_bw;
@@ -157,7 +159,7 @@ async function exportEnrichment() {
           });
           if (foundLink != null) {
             doc.B_TED_2ndHost = foundLink.device2;
-            const secondDetails = await linkParser.parseHostname(doc.B_TED_2ndHost);
+            const secondDetails = linkParser.parseHostname(doc.B_TED_2ndHost);
             doc.B_TED_2ndPop = secondDetails ? secondDetails.popName : undefined;
           } else {
             logger.error(
