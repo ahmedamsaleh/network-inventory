@@ -33,6 +33,22 @@ fi
 command -v java >/dev/null || { echo "fetch-mongod: java not found" >&2; exit 1; }
 command -v javac >/dev/null || { echo "fetch-mongod: javac not found" >&2; exit 1; }
 
+javac_version="$(javac -version 2>&1)"
+javac_major="$(printf '%s\n' "$javac_version" | sed -E 's/^[^0-9]*([0-9]+).*/\1/')"
+java_version="$(java -version 2>&1 | sed -nE 's/.*version "([^"]+)".*/\1/p' | head -n 1)"
+java_major="${java_version%%.*}"
+if [[ "$java_version" == 1.* ]]; then
+  java_major="${java_version#1.}"
+  java_major="${java_major%%.*}"
+fi
+
+if ! [[ "$javac_major" =~ ^[0-9]+$ ]] || [ "$javac_major" -lt 17 ] ||
+  ! [[ "$java_major" =~ ^[0-9]+$ ]] || [ "$java_major" -lt 17 ]; then
+  echo "fetch-mongod: JDK 17 or newer is required (found javac $javac_version and java ${java_version:-unknown})." >&2
+  echo "Install and select a JDK 17+ so both java and javac use it, or set MONGOMS_USE_DOWNLOAD=1 if MongoDB downloads are accessible." >&2
+  exit 1
+fi
+
 mkdir -p "$LIBS" "$CACHE/classes"
 
 MAVEN="https://repo1.maven.org/maven2"
