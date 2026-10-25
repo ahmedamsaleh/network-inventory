@@ -206,19 +206,19 @@ describe('GET /interfaces/pagination', () => {
   test('searches name/alias/device hostname/ip/second host and returns flat rows', async () => {
     const all = await agent.get('/interfaces/pagination').expect(200);
     expect(all.body.total).toBe(3);
-    expect(all.body.rows[0]).toMatchObject({ name: 'ge-0/0/0', device: 'router-01' }); // default sort: device hostname
+    expect(all.body.rows[0]).toMatchObject({ ifName: 'ge-0/0/0', hostname: 'router-01' }); // default sort: device hostname
     expect(all.body.rows[0].author).toBeUndefined();
 
     const byAlias = await agent
       .get('/interfaces/pagination')
       .query({ search: 'int-ipt' })
       .expect(200);
-    expect(byAlias.body.rows.map((r) => r.name)).toEqual(['xe-1/0/0']);
+    expect(byAlias.body.rows.map((r) => r.ifName)).toEqual(['xe-1/0/0']);
     const byDevice = await agent
       .get('/interfaces/pagination')
       .query({ search: 'router-03' })
       .expect(200);
-    expect(byDevice.body.rows.map((r) => r.name)).toEqual(['ge-0/0/1']);
+    expect(byDevice.body.rows.map((r) => r.ifName)).toEqual(['ge-0/0/1']);
     const bySecondHost = await agent
       .get('/interfaces/pagination')
       .query({ search: 'router-09' })
@@ -231,9 +231,15 @@ describe('GET /interfaces/pagination', () => {
     expect(byIp.body.total).toBe(1);
     const sorted = await agent
       .get('/interfaces/pagination')
+      .query({ sort: 'ifIndex', order: 'desc', limit: 1 })
+      .expect(200);
+    expect(sorted.body.rows[0].ifIndex).toBe(3);
+    // unknown sort field -> default sort field (hostname), the requested order is kept
+    const fallback = await agent
+      .get('/interfaces/pagination')
       .query({ sort: 'index', order: 'desc', limit: 1 })
       .expect(200);
-    expect(sorted.body.rows[0].index).toBe(3);
+    expect(fallback.body.rows[0].hostname).toBe('router-03');
   });
 });
 

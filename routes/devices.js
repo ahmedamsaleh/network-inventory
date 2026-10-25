@@ -143,7 +143,7 @@ function discoveredDevice(device) {
       anInterface.author = { id: self.device.author.id, email: self.device.author.email };
       anInterface.index = value[ifTableColumns.ifIndex];
       anInterface.description = value[ifTableColumns.ifDescr];
-      anInterface.type = value[ifTableColumns.ifType];
+      anInterface.ifType = value[ifTableColumns.ifType];
       anInterface.speed = value[ifTableColumns.ifSpeed];
       anInterface.adminStatus = value[ifTableColumns.ifAdminStatus];
       anInterface.operStatus = value[ifTableColumns.ifOperStatus];
