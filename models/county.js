@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const mongoosePaginate = require('mongoose-paginate-v2');
 //Database template setup
-const governorateSchema = new mongoose.Schema({
+const countySchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Name is required'] },
   acronym: String,
   author: {
@@ -13,7 +13,7 @@ const governorateSchema = new mongoose.Schema({
   },
 });
 
-governorateSchema.plugin(mongoosePaginate);
+countySchema.plugin(mongoosePaginate);
 
-const Governorate = mongoose.model('Governorate', governorateSchema);
-module.exports = Governorate; //mongoose.model("Governorate", governorateSchema);
+const County = mongoose.model('County', countySchema);
+module.exports = County; //mongoose.model("County", countySchema);

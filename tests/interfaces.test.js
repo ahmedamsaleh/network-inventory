@@ -1,16 +1,10 @@
 /**
  * CRUD for /interfaces.
  *
- * The interfaces router is written as if it were mounted under
- * /devices/:id/interfaces (it reads request.params.id everywhere), but
- * application.js mounts it at /interfaces. Consequences asserted below:
+ * The router is mounted at /interfaces (not under a device), so the owning
+ * device is passed explicitly: GET /interfaces/new?device=<id> and the form's
+ * hidden interface[device][id] on POST.
  *
- *  - GET /interfaces/new responds 500: Device.findById(undefined) yields
- *    null and the "new" view dereferences device._id.
- *  - POST /interfaces creates the Interface document (with author) but then
- *    crashes on `foundDevice.interfaces.push` (foundDevice is null) inside a
- *    Mongoose callback, so the HTTP request NEVER gets a response and the
- *    interface is never attached to any device.
  *  - GET /interfaces/:id (the "show" route) renders the *edit* template and
  *    is not protected by isLoggedIn.
  *  - PUT/DELETE also maintain the embedded copy of the interface inside the
@@ -57,20 +51,30 @@ describe('Interface CRUD (authenticated)', () => {
   test('INDEX: GET /interfaces renders the list', async () => {
     await makeLinkedInterface({ name: 'ge-9/9/9', index: 99, alias: 'index-test' });
     const res = await agent.get('/interfaces').expect(200);
-    expect(res.text).toContain('ge-9/9/9');
-    expect(res.text).toContain('router-ifx');
+    expect(res.text).toContain('data-url="/interfaces/pagination"');
+    const json = await agent.get('/interfaces/pagination').expect(200);
+    const row = json.body.rows.find((r) => r.name === 'ge-9/9/9');
+    expect(row).toBeDefined();
+    expect(row.device).toBe('router-ifx');
   });
 
-  test('NEW: GET /interfaces/new responds 500 (view needs a device that the route never finds)', async () => {
-    await agent.get('/interfaces/new').expect(500);
+  test('NEW: GET /interfaces/new needs a device (?device=<id>)', async () => {
+    // without a device there is nothing to attach the interface to
+    await agent.get('/interfaces/new').expect(302).expect('location', '/devices');
+    await agent
+      .get('/interfaces/new')
+      .query({ device: new app.mongoose.Types.ObjectId() })
+      .expect(404);
+    const res = await agent
+      .get('/interfaces/new')
+      .query({ device: String(device._id) })
+      .expect(200);
+    expect(res.text).toContain('Add New Interface to router-ifx');
+    expect(res.text).toContain('action="/interfaces"');
+    expect(res.text).toContain('name="interface[device][id]" value="' + device._id + '"');
   });
 
-  test('CREATE: POST /interfaces stores an orphaned interface and responds 500', async () => {
-    // The route looks the device up with request.params.id, which is never
-    // set at this mount point -> foundDevice is null -> TypeError on
-    // `foundDevice.interfaces.push`. Previously (callback code) the TypeError
-    // was swallowed process-wide and the request hung; with async handlers
-    // Express 5 answers 500. The interface document is created either way.
+  test('CREATE: POST /interfaces creates the interface and attaches it to the device', async () => {
     await agent
       .post('/interfaces')
       .type('form')
@@ -80,18 +84,46 @@ describe('Interface CRUD (authenticated)', () => {
         'interface[index]': '7',
         'interface[type]': 'ethernet',
         'interface[speed]': '1000000000',
+        'interface[device][id]': String(device._id),
+        'interface[device][hostname]': 'ignored-the-device-is-looked-up',
       })
-      .expect(500);
+      .expect(302)
+      .expect('location', '/devices/' + device._id);
 
-    // the interface WAS created and even got its author filled in ...
     const intf = await app.models.Interface.findOne({ name: 'ge-0/0/7' });
     expect(intf).not.toBeNull();
     expect(intf.alias).toBe('created-via-http');
     expect(intf.author.email).toBe(user.email);
-    // ... but it is attached to no device
-    expect(intf.device.toObject()).toEqual({});
+    expect(intf.device.hostname).toBe('router-ifx');
+    expect(String(intf.device.id)).toBe(String(device._id));
     const dev = await app.models.Device.findById(device._id);
-    expect(dev.interfaces.some((i) => i.name === 'ge-0/0/7')).toBe(false);
+    expect(dev.interfaces.some((i) => i.name === 'ge-0/0/7')).toBe(true);
+  });
+
+  test('CREATE: POST /interfaces without a (valid) device creates nothing and redirects', async () => {
+    const before = await app.models.Interface.countDocuments({});
+    await agent
+      .post('/interfaces')
+      .type('form')
+      .send({ 'interface[name]': 'orphan-0' })
+      .expect(302)
+      .expect('location', '/devices');
+    await agent
+      .post('/interfaces')
+      .type('form')
+      .send({ 'interface[name]': 'orphan-1', 'interface[device][id]': 'not-an-id' })
+      .expect(302)
+      .expect('location', '/devices');
+    await agent
+      .post('/interfaces')
+      .type('form')
+      .send({
+        'interface[name]': 'orphan-2',
+        'interface[device][id]': String(new app.mongoose.Types.ObjectId()),
+      })
+      .expect(302)
+      .expect('location', '/devices');
+    expect(await app.models.Interface.countDocuments({})).toBe(before);
   });
 
   test('SHOW: GET /interfaces/:id renders the edit template and requires NO login', async () => {
@@ -178,7 +210,7 @@ describe('Interface CRUD (authenticated)', () => {
         'interface[linkType]': 'International',
         'interface[provider]': 'SomeProvider',
         'interface[service]': 'IPT',
-        'interface[termination]': 'ALX',
+        'interface[termination]': 'COR',
         'interface[subCable]': 'SMW4',
         'interface[teCID]': 'CID-1',
         'interface[linkID]': 'L10',
@@ -188,7 +220,7 @@ describe('Interface CRUD (authenticated)', () => {
     expect(updated.linkType).toBe('International');
     expect(updated.provider).toBe('SomeProvider');
     expect(updated.service).toBe('IPT');
-    expect(updated.termination).toBe('ALX');
+    expect(updated.termination).toBe('COR');
   });
 
   test('DESTROY: DELETE /interfaces/:id removes the document and the embedded copy', async () => {

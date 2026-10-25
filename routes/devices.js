@@ -4,10 +4,11 @@ const Device = require('../models/device');
 const Interface = require('../models/interface');
 const POP = require('../models/pop');
 const Sector = require('../models/sector');
-const Governorate = require('../models/governorate');
+const County = require('../models/county');
 const Link = require('../models/link');
 const middleware = require('../middleware');
 const snmpSession = require('../services/snmpSession');
+const pagination = require('../services/pagination');
 const config = require('../config');
 const seedDB = require('../seeds');
 const snmpConstants = require('../lookUps');
@@ -72,7 +73,7 @@ function discoveredDevice(device) {
   self.inSyncMode = false;
   self.session = snmpSession.createSession({
     host: self.device.ipaddress,
-    community: S(self.device.communityString).trim().s,
+    community: S(self.device.community || self.device.communityString).trim().s,
     timeoutMs: config.snmp.timeoutMs,
     onError: function (error) {
       logger.error('device ' + self.name + ' SNMP session error: ' + error);
@@ -232,7 +233,7 @@ function discoveredDevice(device) {
           !S(name).contains('.') &&
           !S(name).contains(':') &&
           !S(name).isEmpty() &&
-          !S(name).startsWith('giza') &&
+          !S(name).startsWith('galway') &&
           (S(name).startsWith('100ge') ||
             S(name).startsWith('bundle-ether') ||
             S(name).startsWith('hundredgige') ||
@@ -471,21 +472,159 @@ function discoveredDevice(device) {
     await self.walkTables();
   };
   this.discoverInterfaces = async function () {
-    logger.info(self.name + ' ' + self.device.ipaddress + ' ' + self.device.communityString);
+    logger.info(
+      self.name +
+        ' ' +
+        self.device.ipaddress +
+        ' ' +
+        (self.device.community || self.device.communityString)
+    );
     await self.walkTables();
   };
 }
-//INDEX - show all devices
-router.get('/', middleware.isLoggedIn, async function (request, response) {
-  let foundDevices;
-  try {
-    foundDevices = await Device.find({});
-  } catch (err) {
-    logger.error(err);
-    return;
+/**
+ * Reads the free-text device fields of a submitted form (see
+ * Device.editableTextFields): every value is trimmed; empty values fall back
+ * to the schema default when the field has one, otherwise they are left out
+ * on create / cleared on update. `community` also accepts the legacy
+ * `communityString` input name and is mirrored into `communityString`.
+ */
+function deviceFieldsFromForm(form, { forUpdate } = {}) {
+  const fields = {};
+  for (const name of Device.editableTextFields) {
+    let raw = form[name];
+    if (name === 'community' && (raw === undefined || raw === '')) {
+      raw = form.communityString;
+    }
+    let value = typeof raw === 'string' ? raw.trim() : raw;
+    if (value === '' || value === undefined || value === null) {
+      const schemaDefault = Device.schema.path(name).defaultValue;
+      value =
+        schemaDefault !== undefined
+          ? schemaDefault
+          : forUpdate && raw !== undefined
+            ? ''
+            : undefined;
+    }
+    if (value !== undefined) {
+      fields[name] = value;
+    }
   }
-  response.render('devices/index', { devices: foundDevices });
-  // response.send("VIEW DEVICES");
+  if (fields.community !== undefined) {
+    fields.communityString = fields.community;
+  }
+  return fields;
+}
+
+// bootstrap-table server-side pagination: GET /devices/pagination?limit&offset&search&sort&order
+const devicePaginationSpec = {
+  Model: Device,
+  searchFields: [
+    'hostname',
+    'ipaddress',
+    'pop',
+    'popName.name',
+    'sector.name',
+    'cty',
+    'county.name',
+    'type',
+    'model',
+    'vendor',
+  ],
+  sortable: {
+    hostname: 'hostname',
+    ipaddress: 'ipaddress',
+    community: 'community',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    popName: 'popName.name',
+    sectorName: 'sector.name',
+    county: 'county.name',
+    type: 'type',
+    model: 'model',
+    vendor: 'vendor',
+    defaultCollector: 'defaultCollector',
+    pop: 'pop',
+    popLongName: 'popLongName',
+    popType: 'popType',
+    cty: 'cty',
+    district: 'district',
+    lastSyncTime: 'lastSyncTime',
+  },
+  defaultSort: 'hostname',
+  // only what views/devices/index.ejs displays
+  projection: {
+    hostname: 1,
+    ipaddress: 1,
+    community: 1,
+    createdAt: 1,
+    updatedAt: 1,
+    description: 1,
+    'popName.name': 1,
+    'sector.name': 1,
+    'county.name': 1,
+    type: 1,
+    model: 1,
+    vendor: 1,
+    defaultCollector: 1,
+    'author.email': 1,
+    'lastUpdatedBy.email': 1,
+    pop: 1,
+    popLongName: 1,
+    popType: 1,
+    cabinet: 1,
+    cty: 1,
+    district: 1,
+    btMSANCode: 1,
+    btMngIP: 1,
+    btSector: 1,
+    btDistrict: 1,
+    sysName: 1,
+    lastSyncTime: 1,
+    deviceSyncCycles: 1,
+  },
+  // flat rows: bootstrap-table 1.8 cannot read nested fields
+  mapRow: function (device) {
+    return {
+      _id: String(device._id),
+      hostname: device.hostname,
+      ipaddress: device.ipaddress,
+      community: device.community,
+      createdAt: device.createdAt,
+      updatedAt: device.updatedAt,
+      description: device.description,
+      popName: device.popName && device.popName.name,
+      sectorName: device.sector && device.sector.name,
+      county: device.county && device.county.name,
+      type: device.type,
+      model: device.model,
+      vendor: device.vendor,
+      defaultCollector: device.defaultCollector,
+      createdBy: device.author && device.author.email,
+      updatedBy: device.lastUpdatedBy && device.lastUpdatedBy.email,
+      pop: device.pop,
+      popLongName: device.popLongName,
+      popType: device.popType,
+      cabinet: device.cabinet,
+      cty: device.cty,
+      district: device.district,
+      btMSANCode: device.btMSANCode,
+      btMngIP: device.btMngIP,
+      btSector: device.btSector,
+      btDistrict: device.btDistrict,
+      sysName: device.sysName,
+      lastSyncTime: device.lastSyncTime,
+      deviceSyncCycles: device.deviceSyncCycles,
+    };
+  },
+};
+router.get('/pagination', middleware.isLoggedIn, async function (request, response) {
+  response.json(await pagination.paginatedResponse(request.query, devicePaginationSpec));
+});
+
+//INDEX - the device list is loaded by the table from /devices/pagination
+router.get('/', middleware.isLoggedIn, function (request, response) {
+  response.render('devices/index');
 });
 
 //CREATE - add new device to DB
@@ -493,23 +632,20 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
   //get data from a form and add to devices array
   const hostname = request.body.device.hostname;
   const ipaddress = request.body.device.ipaddress;
-  const communityString = request.body.device.communityString || config.snmp.defaultCommunity;
-  const type = request.body.device.type;
-  const model = request.body.device.model;
-  const vendor = request.body.device.vendor;
+  const textFields = deviceFieldsFromForm(request.body.device);
   // let popName = request.body.device.popName;
   let popId = request.body.device.popName.name;
   // let sector = request.body.device.sector;
   let sectorId = request.body.device.sector.name;
-  // let governorate = request.body.device.governorate;
-  let governorateId = request.body.device.governorate.name;
+  // let county = request.body.device.county;
+  let countyId = request.body.device.county.name;
   ///
   let aPOP = new POP();
   let aSector = new Sector();
-  let aGove = new Governorate();
+  let aCty = new County();
   let emptySector = false;
   let emptyPOP = false;
-  let emptyGove = false;
+  let emptyCty = false;
 
   if (sectorId === 'NONE') {
     emptySector = true;
@@ -529,11 +665,11 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
       logger.error(error);
     }
   }
-  if (governorateId === 'NONE') {
-    emptyGove = true;
-    logger.info('gove name is: ' + governorateId);
+  if (countyId === 'NONE') {
+    emptyCty = true;
+    logger.info('cty name is: ' + countyId);
     try {
-      aGove = (await Governorate.findOne({ name: 'NONE' })) || aGove;
+      aCty = (await County.findOne({ name: 'NONE' })) || aCty;
     } catch (error) {
       logger.error(error);
     }
@@ -547,9 +683,9 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
     popId = aPOP._id || request.body.device.popName.name;
     logger.info('pop id is: ' + popId);
   }
-  if (S(emptyGove).toBoolean()) {
-    governorateId = aGove._id || request.body.device.governorate.name;
-    logger.info('gove id is: ' + governorateId);
+  if (S(emptyCty).toBoolean()) {
+    countyId = aCty._id || request.body.device.county.name;
+    logger.info('cty id is: ' + countyId);
   }
 
   if (popId === undefined) {
@@ -572,31 +708,27 @@ router.post('/', middleware.isLoggedIn, async function (request, response) {
     logger.error(error);
     return;
   }
-  if (governorateId === undefined) {
+  if (countyId === undefined) {
     return;
   }
-  let foundGove;
+  let foundCty;
   try {
-    foundGove = await Governorate.findById(governorateId);
+    foundCty = await County.findById(countyId);
   } catch (error) {
     logger.error(error);
     console.log(error);
     return;
   }
-  console.log(foundGove);
+  console.log(foundCty);
   ///here goes correct values
-  const aDevice = {
+  const aDevice = Object.assign({}, textFields, {
     hostname: hostname.trim(),
     ipaddress: ipaddress.trim(),
     author: { id: request.user._id, email: request.user.email },
-    communityString: communityString.trim(),
-    type: type.trim(),
-    model: model.trim(),
-    vendor: vendor.trim(),
     popName: foundPOP,
     sector: foundSector,
-    governorate: foundGove,
-  };
+    county: foundCty,
+  });
   aDevice.interfaces = [];
   logger.info('Device discovery started');
   let device;
@@ -668,14 +800,14 @@ router.get('/sync/:id', middleware.isLoggedIn, async function (request, response
 
 //SHOW DEVICE ROUTE
 router.get('/:id', middleware.isLoggedIn, async function (request, response) {
-  //find device with provided id
-  let foundDevice;
-  try {
-    foundDevice = await Device.findById(request.params.id).populate('interfaces').exec();
-  } catch (error) {
-    logger.error(error);
-    return;
-  }
+  const foundDevice = await middleware.findByIdOr404(
+    Device,
+    request.params.id,
+    response,
+    'Device',
+    '/devices'
+  );
+  if (!foundDevice) return;
   //render show template with that device
   response.render('devices/show', { device: foundDevice });
 });
@@ -684,22 +816,38 @@ router.get('/:id', middleware.isLoggedIn, async function (request, response) {
 router.get('/:id/edit', middleware.isLoggedIn, async function (request, response) {
   //is user logged in?
   logger.info('Update a device');
-  let foundDevice;
-  try {
-    foundDevice = await Device.findById(request.params.id);
-  } catch (error) {
-    foundDevice = undefined;
-  }
+  const foundDevice = await middleware.findByIdOr404(
+    Device,
+    request.params.id,
+    response,
+    'Device',
+    '/devices'
+  );
+  if (!foundDevice) return;
   response.render('devices/edit', { device: foundDevice });
 });
 //UPDATE DEVICE ROUTE
 router.put('/:id', middleware.isLoggedIn, async function (request, response) {
   //find and update the correct DEVICE
-  request.body.device.updatedAt = new Date();
-  request.body.device.lastUpdatedBy = { id: request.user._id, email: request.user.email };
+  const form = request.body.device;
+  const updates = deviceFieldsFromForm(form, { forUpdate: true });
+  updates.updatedAt = new Date();
+  updates.lastUpdatedBy = { id: request.user._id, email: request.user.email };
+  if (form.sector) {
+    updates.sector = form.sector;
+  }
   // note: Select2 has a defect which removes pop name and replace it with the id
-  const popObjectId = new mongoose.Types.ObjectId(request.body.device.popName.name);
-  const goveObjectId = new mongoose.Types.ObjectId(request.body.device.governorate.name);
+  if (
+    !form.popName ||
+    !mongoose.isValidObjectId(form.popName.name) ||
+    !form.county ||
+    !mongoose.isValidObjectId(form.county.name)
+  ) {
+    request.flash('error', 'Please choose the POP and the county from the lists');
+    return response.redirect('/devices/' + request.params.id + '/edit');
+  }
+  const popObjectId = new mongoose.Types.ObjectId(form.popName.name);
+  const ctyObjectId = new mongoose.Types.ObjectId(form.county.name);
   let foundPOP;
   try {
     foundPOP = await POP.findById({ _id: popObjectId });
@@ -707,28 +855,22 @@ router.put('/:id', middleware.isLoggedIn, async function (request, response) {
     logger.error(error);
     return response.redirect('/devices/' + request.params.id);
   }
-  request.body.device.popName.name = foundPOP.name;
-  let foundGove;
+  updates.popName = Object.assign({}, form.popName, { name: foundPOP.name });
+  let foundCty;
   try {
-    foundGove = await Governorate.findById({ _id: goveObjectId });
+    foundCty = await County.findById({ _id: ctyObjectId });
   } catch (error) {
     logger.error(error);
     return response.redirect('/devices/' + request.params.id);
   }
-  request.body.device.governorate.name = foundGove.name;
-  let updatedDevice;
+  updates.county = Object.assign({}, form.county, { name: foundCty.name });
   try {
-    updatedDevice = await Device.findByIdAndUpdate(request.params.id, request.body.device);
+    await Device.findByIdAndUpdate(request.params.id, updates);
   } catch (error) {
     logger.error(error);
     return response.redirect('/devices');
   }
   //redirect somewhere (show page)
-  try {
-    await updatedDevice.save();
-  } catch (error) {
-    logger.error(error);
-  }
   response.redirect('/devices/' + request.params.id);
 });
 //DESTROY Device ROUTE

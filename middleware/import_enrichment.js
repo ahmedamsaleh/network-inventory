@@ -10,7 +10,7 @@ const deviceData = {
   B_TED_Elt_Device: 12,
   B_TED_Elt_IP: 13,
   B_TED_Elt_Model: 14,
-  B_TED_Elt_POP_Gov: 15,
+  B_TED_Elt_POP_Cty: 15,
   B_TED_Elt_POP_Name: 16,
   B_TED_Elt_Type: 17,
   B_TED_Elt_Vendor: 18,
@@ -44,8 +44,8 @@ async function createDocRecurse(filename) {
         device.ipaddress = entry;
       } else if (i == deviceData.B_TED_Elt_Model) {
         device.model = entry;
-      } else if (i == deviceData.B_TED_Elt_POP_Gov) {
-        device.governorate.name = entry;
+      } else if (i == deviceData.B_TED_Elt_POP_Cty) {
+        device.county.name = entry;
       } else if (i == deviceData.B_TED_Elt_POP_Name) {
         device.popName.name = entry;
       } else if (i == deviceData.B_TED_Elt_Type) {
@@ -53,7 +53,8 @@ async function createDocRecurse(filename) {
       } else if (i == deviceData.B_TED_Elt_Vendor) {
         device.vendor = entry;
       } else if (i == deviceData.CommunityString) {
-        device.communityString = S(entry).s;
+        device.community = S(entry).s;
+        device.communityString = device.community;
       }
     });
     try {

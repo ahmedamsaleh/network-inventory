@@ -33,9 +33,9 @@ describe('guarded routes redirect anonymous users to /login', () => {
     '/sectors',
     '/sectors/new',
     '/sectors/pagination',
-    '/governorates',
-    '/governorates/new',
-    '/governorates/pagination',
+    '/counties',
+    '/counties/new',
+    '/counties/pagination',
     '/links',
     '/links/new',
     '/users',
@@ -68,8 +68,8 @@ describe('guarded routes redirect anonymous users to /login', () => {
       .expect('location', '/login');
   });
 
-  test('GET show routes with an id are guarded for pops/sectors/governorates/links/validatedusers', async () => {
-    for (const base of ['/pops', '/sectors', '/governorates', '/links', '/validatedusers']) {
+  test('GET show routes with an id are guarded for pops/sectors/counties/links/validatedusers', async () => {
+    for (const base of ['/pops', '/sectors', '/counties', '/links', '/validatedusers']) {
       await app
         .anon()
         .get(base + '/' + fakeId)
@@ -83,7 +83,7 @@ describe('guarded routes redirect anonymous users to /login', () => {
     '/interfaces',
     '/pops',
     '/sectors',
-    '/governorates',
+    '/counties',
     '/links',
     '/validatedusers',
     '/enrichments',
@@ -148,11 +148,11 @@ describe('guarded routes redirect anonymous users to /login', () => {
 describe('routes that are NOT guarded although they mutate/expose data (current behavior)', () => {
   // These assert today's behavior so regressions (or fixes) become visible.
   // Details are exercised per-resource; here we just pin the lack of a guard.
-  test('edit forms of pops/sectors/governorates/links/validatedusers are public', async () => {
-    const { POP, Sector, Governorate, Link, ValidatedUser } = app.models;
+  test('edit forms of pops/sectors/counties/links/validatedusers are public', async () => {
+    const { POP, Sector, County, Link, ValidatedUser } = app.models;
     const pop = await POP.create({ name: 'GuardPop' });
     const sector = await Sector.create({ name: 'GuardSector' });
-    const gov = await Governorate.create({ name: 'GuardGov', acronym: 'GG' });
+    const cty = await County.create({ name: 'GuardCty', acronym: 'GG' });
     const link = await Link.create({
       device1: 'a',
       interface1: 'i1',
@@ -171,7 +171,7 @@ describe('routes that are NOT guarded although they mutate/expose data (current 
       .expect(200);
     await app
       .anon()
-      .get('/governorates/' + gov._id + '/edit')
+      .get('/counties/' + cty._id + '/edit')
       .expect(200);
     await app
       .anon()

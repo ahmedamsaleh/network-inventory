@@ -17,8 +17,12 @@
                     <input class="form-control" type="text" name="device[ipaddress]" >
                 </div>
                 <div class="form-group">
-                    <label for="communityString">Community String</label>
-                    <input class="form-control" type="text" name="device[communityString]" >
+                    <label for="community">SNMP Community</label>
+                    <input class="form-control" type="text" name="device[community]" placeholder="default community">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input class="form-control" type="text" name="device[description]" >
                 </div>
                 <div class="form-group">
                     <label for="device-pop-name">POP Name</label>
@@ -33,8 +37,8 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="device-governorate-name">Governorate Name</label>
-                    <select id="new-device-governorate-name" class="form-control select2-single" type="text" name="device[governorate][name]" >
+                    <label for="device-county-name">County Name</label>
+                    <select id="new-device-county-name" class="form-control select2-single" type="text" name="device[county][name]" >
                     <option value="NONE"></option>
                     </select>
                 </div>
@@ -56,6 +60,46 @@
                 <div class="form-group">
                     <label for="vendor">Vendor</label>
                     <input class="form-control" type="text" name="device[vendor]" >
+                </div>
+                <div class="form-group">
+                    <label for="pop">POP (short code)</label>
+                    <input class="form-control" type="text" name="device[pop]" >
+                </div>
+                <div class="form-group">
+                    <label for="popLongName">POP Long Name</label>
+                    <input class="form-control" type="text" name="device[popLongName]" placeholder="Unkown">
+                </div>
+                <div class="form-group">
+                    <label for="popType">POP Type</label>
+                    <input class="form-control" type="text" name="device[popType]" placeholder="Unkown">
+                </div>
+                <div class="form-group">
+                    <label for="cabinet">Cabinet</label>
+                    <input class="form-control" type="text" name="device[cabinet]" placeholder="Unkown">
+                </div>
+                <div class="form-group">
+                    <label for="cty">County (code)</label>
+                    <input class="form-control" type="text" name="device[cty]" placeholder="Unkown">
+                </div>
+                <div class="form-group">
+                    <label for="district">District</label>
+                    <input class="form-control" type="text" name="device[district]" placeholder="Unkown">
+                </div>
+                <div class="form-group">
+                    <label for="btMSANCode">BT MSAN Code</label>
+                    <input class="form-control" type="text" name="device[btMSANCode]" >
+                </div>
+                <div class="form-group">
+                    <label for="btMngIP">BT Management IP</label>
+                    <input class="form-control" type="text" name="device[btMngIP]" >
+                </div>
+                <div class="form-group">
+                    <label for="btSector">BT Sector</label>
+                    <input class="form-control" type="text" name="device[btSector]" >
+                </div>
+                <div class="form-group">
+                    <label for="btDistrict">BT District</label>
+                    <input class="form-control" type="text" name="device[btDistrict]" >
                 </div>
                 <div class="form-group">
                     <!--<btn-block will let the button takes width of the 2 inputs>-->

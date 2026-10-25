@@ -5,10 +5,10 @@ const mongoosePaginate = require('mongoose-paginate-v2');
 const popSchema = new mongoose.Schema({
   name: String,
   shortName: String,
-  governorateAcro: {
+  countyAcro: {
     id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Governorate',
+      ref: 'County',
     },
     acronym: String,
   },

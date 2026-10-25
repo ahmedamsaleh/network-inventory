@@ -26,8 +26,8 @@ var $jtable = $j('#eventsTable');
         $j('#device-sync-form').attr('action', '/devices/sync/'+value.id);
         $j('#pop-delete-form').attr('action', '/pops/'+value.id+'/?_method=DELETE');
         $j('#pop-update-form').attr('action', '/pops/'+value.id+'/edit');
-        $j('#governorate-delete-form').attr('action', '/governorates/'+value.id+'/?_method=DELETE');
-        $j('#governorate-update-form').attr('action', '/governorates/'+value.id+'/edit');
+        $j('#county-delete-form').attr('action', '/counties/'+value.id+'/?_method=DELETE');
+        $j('#county-update-form').attr('action', '/counties/'+value.id+'/edit');
         $j('#link-delete-form').attr('action', '/links/'+value.id+'/?_method=DELETE');
         $j('#link-update-form').attr('action', '/links/'+value.id+'/edit');
         $j('#sector-delete-form').attr('action', '/sectors/'+value.id+'/?_method=DELETE');
@@ -51,7 +51,7 @@ var $jtable = $j('#eventsTable');
       console.log(checkedRows);
   });
   
-  $j("#governorate-delete-button").click(function() {
+  $j("#county-delete-button").click(function() {
     // $j("#output").empty();
     console.log(checkedRows.length);
     $j.each(checkedRows, function(index, value) {

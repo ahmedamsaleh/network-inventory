@@ -40,11 +40,11 @@ describe('Sector CRUD (authenticated)', () => {
     await agent
       .post('/sectors')
       .type('form')
-      .send({ 'sector[name]': 'Cairo-North', 'sector[description]': 'the north sector' })
+      .send({ 'sector[name]': 'Dublin-North', 'sector[description]': 'the north sector' })
       .expect(302)
       .expect('location', '/sectors');
 
-    const sector = await app.models.Sector.findOne({ name: 'Cairo-North' });
+    const sector = await app.models.Sector.findOne({ name: 'Dublin-North' });
     expect(sector).not.toBeNull();
     sectorId = String(sector._id);
     expect(sector.author.email).toBe(user.email);
@@ -56,27 +56,33 @@ describe('Sector CRUD (authenticated)', () => {
 
   test('SHOW: GET /sectors/:id renders the sector', async () => {
     const res = await agent.get('/sectors/' + sectorId).expect(200);
-    expect(res.text).toContain('Cairo-North');
+    expect(res.text).toContain('Dublin-North');
   });
 
-  test('SHOW: non-existent (but valid) id responds 500', async () => {
-    await agent.get('/sectors/' + new app.mongoose.Types.ObjectId()).expect(500);
+  test('SHOW/EDIT: non-existent or malformed ids respond 404 (not-found page)', async () => {
+    const missing = new app.mongoose.Types.ObjectId();
+    const res = await agent.get('/sectors/' + missing).expect(404);
+    expect(res.text).toContain('Sector ');
+    expect(res.text).toContain(String(missing) + '&#34; does not exist');
+    await agent.get('/sectors/' + missing + '/edit').expect(404);
+    await agent.get('/sectors/not-an-object-id').expect(404); // used to hang forever
+    await agent.get('/sectors/not-an-object-id/edit').expect(404);
   });
 
   test('EDIT: GET /sectors/:id/edit renders the form', async () => {
     const res = await agent.get('/sectors/' + sectorId + '/edit').expect(200);
-    expect(res.text).toContain('Cairo-North');
+    expect(res.text).toContain('Dublin-North');
   });
 
   test('UPDATE: PUT /sectors/:id updates (description works here) and redirects', async () => {
     await agent
       .put('/sectors/' + sectorId)
       .type('form')
-      .send({ 'sector[name]': 'Cairo-South', 'sector[description]': 'renamed' })
+      .send({ 'sector[name]': 'Dublin-South', 'sector[description]': 'renamed' })
       .expect(302)
       .expect('location', '/sectors/' + sectorId);
     const sector = await app.models.Sector.findById(sectorId);
-    expect(sector.name).toBe('Cairo-South');
+    expect(sector.name).toBe('Dublin-South');
     // unlike CREATE, UPDATE passes request.body.sector straight through,
     // so the description IS persisted on update
     expect(sector.description).toBe('renamed');
@@ -85,7 +91,7 @@ describe('Sector CRUD (authenticated)', () => {
   test('PAGINATION: GET /sectors/pagination returns JSON (limit 500)', async () => {
     const res = await agent.get('/sectors/pagination').expect(200).expect('content-type', /json/);
     expect(res.body).toMatchObject({ limit: 500 });
-    expect(res.body.docs.map((d) => d.name)).toContain('Cairo-South');
+    expect(res.body.docs.map((d) => d.name)).toContain('Dublin-South');
   });
 
   test('DESTROY: DELETE /sectors/:id removes the sector', async () => {

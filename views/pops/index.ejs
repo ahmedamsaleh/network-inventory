@@ -12,7 +12,7 @@
                     <a href="/pops/"><button type="button" class="btn btn-default active">All POPs</button></a>
                     <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
                     <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
-                    <a href="/governorates/"><button type="button" class="btn btn-default ">All Governorates</button></a>
+                    <a href="/counties/"><button type="button" class="btn btn-default ">All Counties</button></a>
                     <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
                     <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
                     <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
@@ -38,35 +38,33 @@
 
         <div class="row text-left" >
             <div class="table-responsive">
-                <table id="eventsTable" data-pagination="true" data-search="true"data-toggle="table" data-height="525" data-pagination="true" 
-                data-maintain-selected="true" data-search="true" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" 
-                data-toolbar="#toolbar" data-single-select="true">
+                <table id="eventsTable" data-toggle="table" data-url="/pops/pagination" data-side-pagination="server" data-query-params-type="limit"
+                data-pagination="true" data-page-size="10" data-page-list="[10, 25, 50, 100, 500]" data-search="true"
+                data-height="525" data-maintain-selected="true" data-show-refresh="true" data-show-toggle="true"
+                data-show-columns="true" data-toolbar="#toolbar" data-single-select="true" data-sort-name="name" data-sort-order="asc">
                     <thead>
                         <tr>
                             <th data-field="state" data-checkbox="true"> </th>
                             <th data-field="_id" data-visible="false">ID</th>
-                            <th data-field="name" data-sortable="true">Name</th>
-                            <th data-field="acronym">Acronym</th>
-                            <th data-field="governorate" data-sortable="true">Governorate</th>
+                            <th data-field="name" data-sortable="true" data-formatter="popLinkFormatter">Name</th>
+                            <th data-field="acronym" data-sortable="true">Acronym</th>
+                            <th data-field="county" data-sortable="true">County</th>
                             <th data-field="district" data-sortable="true">District</th>
                             <th data-field="sector" data-sortable="true">Sector</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <% pops.forEach(function(pop){ %>
-                            <tr>
-                                <td><% %></td>
-                                <td><%= pop._id %></td>
-                                <td><a href="/pops/<%= pop._id %>"><%= pop.name %></a></td>
-                                <td><%= pop.shortName %></td>
-                                <td><%= pop.governorateAcro %></td>
-                                <td><%= pop.district %></td>
-                                <td><%= pop.sector %></td>
-                            </tr>
-                        <% }); %>
-                    </tbody>
                 </table>
             </div>
         </div>
     </div>
+<script type="text/javascript">
+    function escapeHtml(value) {
+        return String(value === undefined || value === null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    // bootstrap-table cell formatters (rows come from GET /pops/pagination)
+    function popLinkFormatter(value, row) {
+        return '<a href="/pops/' + row._id + '">' + escapeHtml(value) + '</a>';
+    }
+</script>
 <%- include('../partials/footer') %>

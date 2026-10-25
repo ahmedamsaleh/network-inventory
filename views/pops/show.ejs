@@ -6,7 +6,7 @@
             <div class="list-group">
                 <a href="/devices/"><li class="list-group-item" href="/devices">All Devices</li></a>
                 <a href="/pops/"><li class="list-group-item active">All POPs</li></a>
-                <a href="/governorates/"><li class="list-group-item " href="/governorates">All Governorates</li></a>
+                <a href="/counties/"><li class="list-group-item " href="/counties">All Counties</li></a>
                 <a href="/sectors/"><li class="list-group-item">All Sectors</li></a>
                 <a href="/links/"><li class="list-group-item">All Links</li></a>
                 <a href="/users/"><li class="list-group-item">All Users</li></a>
@@ -20,7 +20,7 @@
                 <div class="caption-full">
                     <h4 class="pull-right">Acronum: <%= pop.shortName  %></h4>
                     <h4><a href="/pops/<%= pop._id %>"><%= pop.name  %></a></h4>
-                    <h4>Governorate: <%= pop.governorateAcro.acronym  %></h4>
+                    <h4>County: <%= pop.countyAcro.acronym  %></h4>
                     <h4>District: <%= pop.district  %></h4>
                     <h4>Sector: <%= pop.sector  %></h4>
                     <% if(pop.author.email == undefined){ %>

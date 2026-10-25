@@ -67,8 +67,14 @@ describe('Link CRUD (authenticated)', () => {
     expect(res.text).toContain('router-b');
   });
 
-  test('SHOW: non-existent (but valid) id responds 500', async () => {
-    await agent.get('/links/' + new app.mongoose.Types.ObjectId()).expect(500);
+  test('SHOW/EDIT: non-existent or malformed ids respond 404 (not-found page)', async () => {
+    const missing = new app.mongoose.Types.ObjectId();
+    const res = await agent.get('/links/' + missing).expect(404);
+    expect(res.text).toContain('Link ');
+    expect(res.text).toContain(String(missing) + '&#34; does not exist');
+    await agent.get('/links/' + missing + '/edit').expect(404);
+    await agent.get('/links/not-an-object-id').expect(404); // used to hang forever
+    await agent.get('/links/not-an-object-id/edit').expect(404);
   });
 
   test('EDIT: GET /links/:id/edit renders the form', async () => {

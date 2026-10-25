@@ -18,7 +18,7 @@ const enrichmentSchema = new mongoose.Schema({
   B_TED_Elt_Device: String,
   B_TED_Elt_IP: String,
   B_TED_Elt_Model: String,
-  B_TED_Elt_POP_Gov: String,
+  B_TED_Elt_POP_Cty: String,
   B_TED_Elt_POP_Name: String,
   B_TED_Elt_Type: String,
   B_TED_Elt_Vendor: String,

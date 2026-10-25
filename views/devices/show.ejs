@@ -6,7 +6,7 @@
             <div class="list-group">
                 <a href="/devices/"><li class="list-group-item active" href="/devices">All Devices</li></a>
                 <a href="/pops/"><li class="list-group-item">All POPs</li></a>
-                <a href="/governorates/"><li class="list-group-item" href="/governorates">All Governorates</li></a>
+                <a href="/counties/"><li class="list-group-item" href="/counties">All Counties</li></a>
                 <a href="/sectors/"><li class="list-group-item">All Sectors</li></a>
                 <a href="/links/"><li class="list-group-item">All Links</li></a>
                 <a href="/users/"><li class="list-group-item">All Users</li></a>
@@ -21,6 +21,19 @@
                     <h4 class="pull-right">IP: <%=device.ipaddress  %></h4>
                     <h4><a href="/devices/<%= device._id %>"><%=device.hostname  %></a></h4>
                     <p><%= device.description  %></p>
+                    <table class="table table-condensed">
+                        <tbody>
+                            <tr><th>SNMP community</th><td><%= device.community %></td><th>Type / Model / Vendor</th><td><%= device.type %> / <%= device.model %> / <%= device.vendor %></td></tr>
+                            <tr><th>POP</th><td><%= device.popName.name %> (<%= device.pop %>)</td><th>POP long name / type</th><td><%= device.popLongName %> / <%= device.popType %></td></tr>
+                            <tr><th>Sector</th><td><%= device.sector.name %></td><th>County</th><td><%= device.county.name %> (<%= device.cty %>)</td></tr>
+                            <tr><th>District</th><td><%= device.district %></td><th>Cabinet</th><td><%= device.cabinet %></td></tr>
+                            <tr><th>BT MSAN code</th><td><%= device.btMSANCode %></td><th>BT management IP</th><td><%= device.btMngIP %></td></tr>
+                            <tr><th>BT sector</th><td><%= device.btSector %></td><th>BT district</th><td><%= device.btDistrict %></td></tr>
+                            <tr><th>sysName</th><td><%= device.sysName %></td><th>sysObjectID</th><td><%= device.sysObjectID %></td></tr>
+                            <tr><th>sysDescr</th><td colspan="3"><%= device.sysDescr %></td></tr>
+                            <tr><th>Discovered</th><td><%= device.discovered %></td><th>Last sync</th><td><%= device.lastSyncTime ? device.lastSyncTime.toLocaleString() : '' %> (cycles: <%= device.deviceSyncCycles %>)</td></tr>
+                        </tbody>
+                    </table>
                     <p><em>Added By:  <%= device.author.email %></em></p>
                     <!--/currentUser is setted up application.js middleware/-->
                     <!--<!% console.log("show.ejs currentUser: "+ currentUser) %>-->

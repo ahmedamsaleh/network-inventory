@@ -55,6 +55,29 @@ middlewareObj.checkInterfaceOwnership = async function (request, response, next)
   }
 };
 
+/**
+ * Looks a document up by id and answers 404 (views/not-found.ejs) when the id
+ * is malformed or nothing matches. Resolves with the document, or with null
+ * after the response has been sent, so callers just `return` on null.
+ */
+middlewareObj.findByIdOr404 = async function (Model, id, response, label, backUrl) {
+  let document = null;
+  try {
+    document = await Model.findById(id);
+  } catch (error) {
+    if (error.name !== 'CastError') {
+      throw error;
+    }
+  }
+  if (!document) {
+    response.status(404).render('not-found', {
+      message: label + ' "' + id + '" does not exist',
+      backUrl: backUrl,
+    });
+  }
+  return document;
+};
+
 middlewareObj.isLoggedIn = function (request, response, next) {
   // return next();//hack
   if (request.isAuthenticated()) {

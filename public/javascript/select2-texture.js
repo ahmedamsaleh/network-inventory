@@ -8,16 +8,16 @@ var nodesocket;
 	var socket = "";
 		var pops_pagination_url = "";//"http://"+socket+"/pops/pagination";
 		var sectors_pagination_url = "";//"http://"+socket+"/sectors/pagination";
-		var governorates_pagination_url = "";//"http://"+socket+"/governorates/pagination";
+		var counties_pagination_url = "";//"http://"+socket+"/counties/pagination";
 	$j.get('/getenv', function(data) {
 	    nodesocket = data;
 	    console.log(nodesocket);
 		 IP = nodesocket.ip;//"127.0.0.1";
 		 PORT = nodesocket.port;//"8080";
 		 socket = IP +":"+ PORT;
-		 pops_pagination_url = "http://"+socket+"/pops/pagination";
+		 pops_pagination_url = "http://"+socket+"/pops/pagination?limit=500";
 		 sectors_pagination_url = "http://"+socket+"/sectors/pagination";
-		 governorates_pagination_url = "http://"+socket+"/governorates/pagination";
+		 counties_pagination_url = "http://"+socket+"/counties/pagination";
 
 
 		$j.ajax({
@@ -27,7 +27,7 @@ var nodesocket;
 		  }
 		}).done(function( data ) {
 		    if ( console && console.log ) {
-		        popsData = JSON.parse(data)["docs"];
+		        popsData = JSON.parse(data)["rows"];
 		        console.log(popsData);
 				mappedPopsData = $j.map(popsData, function (obj) {
 				obj.text = obj.text || obj.name; // replace name with the property used for the text
@@ -100,23 +100,23 @@ var nodesocket;
 		});
 
 		$j.ajax({
-		  url: governorates_pagination_url,//"http://127.0.0.1:8080/governorates/pagination",
+		  url: counties_pagination_url,//"http://127.0.0.1:8080/counties/pagination",
 		  beforeSend: function( xhr ) {
 		    xhr.overrideMimeType( "text/plain; charset=x-user-defined" );
 		  }
 		}).done(function( data ) {
 		    if ( console && console.log ) {
-		        governoratesData = JSON.parse(data)["docs"];
-		        console.log(governoratesData);
-				mappedGovernoratesData = $j.map(governoratesData, function (obj) {
+		        countiesData = JSON.parse(data)["docs"];
+		        console.log(countiesData);
+				mappedCountiesData = $j.map(countiesData, function (obj) {
 				obj.text = obj.text || obj.name; // replace name with the property used for the text
 				return obj;
 				});
 
-				$j("#device-governorate-name").select2({
+				$j("#device-county-name").select2({
 					placeholder: 'type something...',
 					selectOnClose: true,
-					data: mappedGovernoratesData,
+					data: mappedCountiesData,
 			        theme: "bootstrap",
 			        width: null,
 			        containerCssClass: ':all:',
@@ -126,10 +126,10 @@ var nodesocket;
 						});
 					}
 				});
-				$j("#new-device-governorate-name").select2({
+				$j("#new-device-county-name").select2({
 					placeholder: 'type something...',
 					selectOnClose: true,
-					data: mappedGovernoratesData,
+					data: mappedCountiesData,
 			        theme: "bootstrap",
 			        width: null,
 			        containerCssClass: ':all:',
@@ -142,13 +142,13 @@ var nodesocket;
 	});
 
 		 
-		// var pops_pagination_url = "http://"+socket+"/pops/pagination";
+		// var pops_pagination_url = "http://"+socket+"/pops/pagination?limit=500";
 		// var sectors_pagination_url = "http://"+socket+"/sectors/pagination";
-		// var governorates_pagination_url = "http://"+socket+"/governorates/pagination";
+		// var counties_pagination_url = "http://"+socket+"/counties/pagination";
 	$j.fn.select2.defaults.set( "theme", "bootstrap" );
 	// var $jeventSelect = $j("#device-pop-name");
 	// var $jeventSelect = $j("#device-sector-name");
-	// var $jeventSelect = $j("#device-governorate-name");
+	// var $jeventSelect = $j("#device-county-name");
 
 
   
@@ -156,8 +156,8 @@ var nodesocket;
 	var mappedPopsData = [];
 	var sectorsData = [];
 	var mappedSectorsData = [];
-	var governoratesData = [];
-	var mappedGovernoratesData = [];
+	var countiesData = [];
+	var mappedCountiesData = [];
 	
 	$j("#interface-link-type").on("change", function (e) { 
 		var select = this.value;
