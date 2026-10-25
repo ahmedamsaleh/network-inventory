@@ -1,0 +1,5 @@
+<%# submit + cancel, identical on every form: label, cancelHref, (optional) cls %>
+<div class="form-group app-form-actions">
+    <button type="submit" class="btn <%= typeof cls !== 'undefined' && cls ? cls : 'btn-primary' %>"><i class="fa fa-check"></i> <%= label %></button>
+    <a class="btn btn-default" href="<%= cancelHref %>">Cancel</a>
+</div>

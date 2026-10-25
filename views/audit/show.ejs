@@ -1,0 +1,26 @@
+<%- include('../partials/header', { pageTitle: 'Audit entry' }) %>
+<%
+  const targetLink = entry.target && entry.target.type === 'device' && entry.target.id ? '<a href="/devices/' + entry.target.id + '">' + (entry.target.label || entry.target.id) + '</a>' : (entry.target && entry.target.label) || '';
+  let actions = '<a class="btn btn-default" href="/audit"><i class="fa fa-history"></i> Audit log</a>';
+  if (entry.target && entry.target.type === 'device' && entry.target.id) actions += '<a class="btn btn-default" href="/audit?target=' + encodeURIComponent(entry.target.id) + '"><i class="fa fa-filter"></i> All entries of this device</a>';
+%>
+<div class="container">
+    <%- include('../partials/page-header', { title: entry.action, subtitle: h.dateTime(entry.at), breadcrumbs: [['Audit log', '/audit'], [entry.action]], actions: actions }) %>
+    <div class="row">
+        <div class="col-md-5">
+            <%- include('../partials/details', { title: 'Entry', rows: [
+                ['When', h.dateTime(entry.at)], ['Action', entry.action], ['User', entry.user && entry.user.email],
+                ['Target type', entry.target && entry.target.type], ['Target', targetLink, { raw: true }],
+                ['Target id', entry.target && entry.target.id ? '<code class="app-mono">' + entry.target.id + '</code>' : '', { raw: true }],
+                ['IP', entry.ip],
+            ] }) %>
+        </div>
+        <div class="col-md-7">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Details</strong> <small class="text-muted">reason, counts and - for permanent deletions - the snapshot of the removed document</small></div>
+                <div class="panel-body"><pre id="audit-details" class="app-mono"><%= detailsJson %></pre></div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

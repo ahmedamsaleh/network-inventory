@@ -1,0 +1,9 @@
+<%- include('../partials/header', { pageTitle: 'Add device model' }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Add a device model', breadcrumbs: [['Device models', '/devicemodels'], ['Add device model']] }) %>
+    <form method="POST" action="/devicemodels">
+        <%- include('_form', { model: null, types: types }) %>
+        <%- include('../partials/form-actions', { label: 'Add device model', cancelHref: '/devicemodels' }) %>
+    </form>
+</div>
+<%- include('../partials/footer') %>

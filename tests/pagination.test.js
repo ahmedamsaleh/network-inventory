@@ -57,22 +57,22 @@ beforeAll(async () => {
       name: 'Dublin POP',
       shortName: 'DUB',
       district: 'Downtown',
-      countyAcro: { acronym: 'DUB' },
-      sector: { name: 'North' },
+      cty: 'DUB',
+      sector: 'North',
     },
     {
       name: 'Cork POP',
       shortName: 'COR',
       district: 'Smouha',
-      countyAcro: { acronym: 'COR' },
-      sector: { name: 'North' },
+      cty: 'COR',
+      sector: 'North',
     },
     {
       name: 'Galway (West) POP',
       shortName: 'GAL',
       district: 'Dokki',
-      countyAcro: { acronym: 'GAL' },
-      sector: { name: 'South' },
+      cty: 'GAL',
+      sector: 'South',
     },
   ]);
 });

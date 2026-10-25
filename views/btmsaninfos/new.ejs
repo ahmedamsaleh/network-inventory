@@ -1,0 +1,9 @@
+<%- include('../partials/header', { pageTitle: 'Add BT MSAN entry' }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Add a BT MSAN entry', breadcrumbs: [['BT MSAN info', '/btmsaninfos'], ['Add entry']] }) %>
+    <form method="POST" action="/btmsaninfos">
+        <%- include('_form', { info: null }) %>
+        <%- include('../partials/form-actions', { label: 'Add entry', cancelHref: '/btmsaninfos' }) %>
+    </form>
+</div>
+<%- include('../partials/footer') %>

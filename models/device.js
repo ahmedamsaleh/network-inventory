@@ -104,6 +104,22 @@ const deviceSchema = new mongoose.Schema({
   btMngIP: String,
   btSector: String,
   btDistrict: String,
+  // SNMP responsiveness (services/snmpProfile.js): a device "known to be slow"
+  // - flagged by hand or after SNMP_SLOW_AFTER_TIMEOUTS consecutive timeouts -
+  // is polled with the short SNMP_SLOW_TIMEOUT_MS / SNMP_SLOW_RETRIES profile
+  snmpSlow: { type: Boolean, default: false },
+  snmpTimeouts: { type: Number, default: 0 }, // consecutive sync timeouts (reset on success)
+  lastSyncError: String,
+  // decommissioning = soft delete (services/decommission.js); decommissioned
+  // devices are excluded from every active list, see Device.activeFilter
+  decommissioned: { type: Boolean, default: false },
+  decommissionedAt: Date,
+  decommissionedBy: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    email: String,
+  },
+  decommissionReason: String,
+  restoredAt: Date,
   interfaces: [Interface.schema],
   // interfaces: [
   //         {
@@ -118,6 +134,12 @@ const deviceSchema = new mongoose.Schema({
 });
 deviceSchema.index({ hostname: 1 }, { unique: true });
 deviceSchema.index({ ipaddress: 1 });
+deviceSchema.index({ decommissioned: 1, hostname: 1 });
+
+/** query filter for the devices that are in service (not decommissioned) */
+deviceSchema.statics.activeFilter = function (filter) {
+  return Object.assign({ decommissioned: { $ne: true } }, filter || {});
+};
 
 // free-text fields the create/update forms may set (all trimmed by the routes)
 deviceSchema.statics.editableTextFields = [

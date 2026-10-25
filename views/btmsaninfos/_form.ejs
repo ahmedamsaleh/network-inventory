@@ -1,0 +1,15 @@
+<% const i = info || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>BT MSAN</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'btmsaninfo[msanCode]', label: 'MSAN code', value: i.msanCode, required: true, maxlength: 64, help: 'Unique (case-insensitive)' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'btmsaninfo[mngIP]', label: 'Management IP', value: i.mngIP, pattern: '((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)', title: 'IPv4 address or blank', placeholder: 'e.g. 10.200.0.1', help: 'Devices whose IP address equals it get the BT fields on sync' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'btmsaninfo[sector]', label: 'Sector', value: i.sector, maxlength: 64, placeholder: 'Unknown' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'btmsaninfo[district]', label: 'District', value: i.district, maxlength: 64, placeholder: 'Unknown' }) %></div>
+        </div>
+        <%- include('../partials/field', { name: 'btmsaninfo[notes]', label: 'Notes', value: i.notes, maxlength: 500 }) %>
+    </div>
+</div>

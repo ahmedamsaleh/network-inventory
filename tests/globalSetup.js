@@ -20,7 +20,11 @@ const { execFileSync } = require('child_process');
 module.exports = async function globalSetup() {
   const binary = path.join(__dirname, '..', '.cache', 'mongod', 'mongod');
 
-  if (!process.env.MONGOMS_SYSTEM_BINARY && !process.env.MONGOMS_USE_DOWNLOAD) {
+  if (
+    process.platform !== 'win32' &&
+    !process.env.MONGOMS_SYSTEM_BINARY &&
+    !process.env.MONGOMS_USE_DOWNLOAD
+  ) {
     if (!fs.existsSync(binary)) {
       execFileSync('bash', [path.join(__dirname, '..', 'scripts', 'fetch-mongod.sh')], {
         stdio: 'inherit',

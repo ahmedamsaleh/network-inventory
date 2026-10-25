@@ -5,8 +5,8 @@
  * device is passed explicitly: GET /interfaces/new?device=<id> and the form's
  * hidden interface[device][id] on POST.
  *
- *  - GET /interfaces/:id (the "show" route) renders the *edit* template and
- *    is not protected by isLoggedIn.
+ *  - GET /interfaces/:id renders a show page with every catalog field
+ *    (guarded); PUT redirects to it.
  *  - PUT/DELETE also maintain the embedded copy of the interface inside the
  *    owning device (found via the interface's stored device.hostname).
  */
@@ -225,7 +225,8 @@ describe('Interface CRUD (authenticated)', () => {
       .get('/interfaces/new')
       .query({ device: String(device._id) })
       .expect(200);
-    expect(res.text).toContain('Add New Interface to router-ifx');
+    expect(res.text).toContain('Add an interface');
+    expect(res.text).toContain('to router-ifx');
     expect(res.text).toContain('action="/interfaces"');
     expect(res.text).toContain('name="interface[device][id]" value="' + device._id + '"');
   });
@@ -291,16 +292,21 @@ describe('Interface CRUD (authenticated)', () => {
     expect(await app.models.Interface.countDocuments({})).toBe(before);
   });
 
-  test('SHOW: GET /interfaces/:id renders the edit template and requires NO login', async () => {
+  test('SHOW: GET /interfaces/:id renders the show page (every catalog field) and is guarded', async () => {
     const intf = await makeLinkedInterface({ name: 'ge-1/1/1', index: 11, alias: 'show-me' });
     const authed = await agent.get('/interfaces/' + intf._id).expect(200);
     expect(authed.text).toContain('show-me');
-    // ODD: this route has no isLoggedIn guard
-    const anon = await app
+    expect(authed.text).not.toContain('name="interface[ifAlias]"'); // not the edit form
+    for (const field of app.models.Interface.fieldCatalog) {
+      expect(authed.text).toContain('<th>' + field.label.replace(/&/g, '&amp;') + '</th>');
+    }
+    expect(authed.text).toContain('href="/interfaces/' + intf._id + '/edit"');
+    await app
       .anon()
       .get('/interfaces/' + intf._id)
-      .expect(200);
-    expect(anon.text).toContain('show-me');
+      .expect(302)
+      .expect('location', '/login');
+    await agent.get('/interfaces/' + new app.mongoose.Types.ObjectId()).expect(404);
   });
 
   test('EDIT: GET /interfaces/:id/edit renders the form (guarded)', async () => {
@@ -332,7 +338,7 @@ describe('Interface CRUD (authenticated)', () => {
         'interface[linkType]': 'Normal',
       })
       .expect(302)
-      .expect('location', '/devices/');
+      .expect('location', '/interfaces/' + intf._id);
 
     const updated = await app.models.Interface.findById(intf._id);
     expect(updated.alias).toBe('after');
@@ -453,7 +459,7 @@ describe('Interface edit form / update with the extended fields', () => {
         'interface[linkType]': 'Normal',
       })
       .expect(302)
-      .expect('location', '/devices/');
+      .expect('location', '/interfaces/' + intf._id);
 
     const updated = await app.models.Interface.findById(intf._id);
     expect(updated).toMatchObject({

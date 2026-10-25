@@ -1,4 +1,5 @@
 //require
+const path = require('path');
 const express = require('express'),
   flash = require('connect-flash'),
   passport = require('passport'),
@@ -18,6 +19,7 @@ const User = require('./models/user'),
 // deleteLogger           = require('./middleware/deleteLogger'),//logging component
 const database = require('./services/database');
 const adminAccount = require('./services/adminAccount');
+const syncRunner = require('./services/syncRunner');
 const fileUpload = require('express-fileupload');
 const MongoStore = require('connect-mongo').MongoStore;
 
@@ -26,6 +28,9 @@ const CronJob = require('cron').CronJob;
 //requiring routes
 const interfaceRoutes = require('./routes/interfaces'),
   popRoutes = require('./routes/pops'),
+  cabinetRoutes = require('./routes/cabinets'),
+  deviceModelRoutes = require('./routes/devicemodels'),
+  btMsanInfoRoutes = require('./routes/btmsaninfos'),
   sectorRoutes = require('./routes/sectors'),
   countyRoutes = require('./routes/counties'),
   linkRoutes = require('./routes/links'),
@@ -33,10 +38,17 @@ const interfaceRoutes = require('./routes/interfaces'),
   validatedUserRoutes = require('./routes/validatedUsers'),
   deviceRoutes = require('./routes/devices'),
   enrichmentRoutes = require('./routes/enrichments'),
+  auditRoutes = require('./routes/audit'),
   indexRoutes = require('./routes/index');
+const middleware = require('./middleware');
+const viewHelpers = require('./services/viewHelpers');
+const listColumns = require('./services/listColumns');
 
 const indexBaseURL = '/',
   popBaseURL = '/pops',
+  cabinetBaseURL = '/cabinets',
+  deviceModelBaseURL = '/devicemodels',
+  btMsanInfoBaseURL = '/btmsaninfos',
   sectorBaseURL = '/sectors',
   countyBaseURL = '/counties',
   linkBaseURL = '/links',
@@ -44,6 +56,7 @@ const indexBaseURL = '/',
   validatedUserBaseURL = '/validatedusers',
   deviceBaseURL = '/devices',
   enrichmentBaseURL = '/enrichments',
+  auditBaseURL = '/audit',
   interfaceBaseURL = '/interfaces';
 // interfaceBaseURL      = "/devices/:id/interfaces";
 
@@ -79,7 +92,15 @@ app.use(
     store: MongoStore.create({ clientPromise: databaseReady }),
   })
 );
-app.use(fileUpload());
+// uploads go to a temp file instead of memory (bulk imports can be large)
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: path.join(__dirname, 'import', 'tmp'),
+    createParentPath: true,
+    limits: { fileSize: 500 * 1024 * 1024 },
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(User.createStrategy());
@@ -90,6 +111,13 @@ passport.deserializeUser(User.deserializeUser()); //read the session, taking the
 //it must be after passport initialization
 app.use(function (request, response, next) {
   response.locals.currentUser = request.user;
+  response.locals.isAdmin = middleware.isAdminUser(request.user);
+  // navigation highlighting + template helpers (views/partials/header.ejs)
+  response.locals.currentPath = request.originalUrl.split('?')[0];
+  // list pages forward their own query string (search / filter[...]) to the table
+  response.locals.currentQuery = request.originalUrl.split('?')[1] || '';
+  response.locals.h = viewHelpers;
+  response.locals.columns = listColumns;
   response.locals.error = request.flash('error');
   response.locals.success = request.flash('success');
   response.locals.warning = request.flash('warning');
@@ -100,10 +128,14 @@ app.use(indexBaseURL, indexRoutes);
 app.use(deviceBaseURL, deviceRoutes);
 app.use(interfaceBaseURL, interfaceRoutes);
 app.use(popBaseURL, popRoutes);
+app.use(cabinetBaseURL, cabinetRoutes);
+app.use(deviceModelBaseURL, deviceModelRoutes);
+app.use(btMsanInfoBaseURL, btMsanInfoRoutes);
 app.use(sectorBaseURL, sectorRoutes);
 app.use(countyBaseURL, countyRoutes);
 app.use(userBaseURL, userRoutes);
 app.use(linkBaseURL, linkRoutes);
+app.use(auditBaseURL, auditRoutes);
 app.use(validatedUserBaseURL, validatedUserRoutes);
 app.use(enrichmentBaseURL, enrichmentRoutes);
 
@@ -135,7 +167,7 @@ new CronJob(
   function () {
     console.log('Automatic sync for devices runs every 48 hrs');
     console.log('current syncing time is: ' + new Date());
-    deviceRoutes.syncDevices();
+    syncRunner.startAll();
   },
   null,
   true,

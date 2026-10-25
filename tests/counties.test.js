@@ -26,8 +26,11 @@ describe('County CRUD (authenticated)', () => {
 
   test('INDEX: GET /counties renders the list', async () => {
     await app.models.County.create({ name: 'Preexisting-County', acronym: 'PG' });
+    // the list itself is loaded by bootstrap-table from /counties/pagination
     const res = await agent.get('/counties').expect(200);
-    expect(res.text).toContain('Preexisting-County');
+    expect(res.text).toContain('data-url="/counties/pagination"');
+    const json = await agent.get('/counties/pagination').expect(200);
+    expect(json.body.rows.map((r) => r.name)).toContain('Preexisting-County');
   });
 
   test('NEW: GET /counties/new renders the form', async () => {
@@ -50,18 +53,17 @@ describe('County CRUD (authenticated)', () => {
     expect(cty.author.email).toBe(user.email);
   });
 
-  test('CREATE: missing required name -> document is not created and the request NEVER gets a response', async () => {
+  test('CREATE: missing required name -> flash message and back to the form, nothing stored', async () => {
     const before = await app.models.County.countDocuments({});
-    // ODD: the error branch of County.create only flashes a message
-    // and never sends a response, so the HTTP request hangs forever.
-    await expect(
-      agent
-        .post('/counties')
-        .type('form')
-        .send({ 'county[acronym]': 'XX' })
-        .timeout({ response: 2000 })
-    ).rejects.toMatchObject({ code: 'ECONNABORTED' });
+    await agent
+      .post('/counties')
+      .type('form')
+      .send({ 'county[acronym]': 'XX' })
+      .expect(302)
+      .expect('location', '/counties/new');
     expect(await app.models.County.countDocuments({})).toBe(before);
+    const form = await agent.get('/counties/new').expect(200);
+    expect(form.text).toContain('Name is required'); // the flash message
   });
 
   test('SHOW: GET /counties/:id renders the county', async () => {
@@ -96,10 +98,14 @@ describe('County CRUD (authenticated)', () => {
     expect(cty.acronym).toBe('GAL2');
   });
 
-  test('PAGINATION: GET /counties/pagination returns JSON (limit 500)', async () => {
-    const res = await agent.get('/counties/pagination').expect(200).expect('content-type', /json/);
-    expect(res.body).toMatchObject({ limit: 500 });
-    expect(res.body.docs.map((d) => d.name)).toContain('Galway-Renamed');
+  test('PAGINATION: GET /counties/pagination returns bootstrap-table {total, rows} (select2 ids)', async () => {
+    const res = await agent
+      .get('/counties/pagination')
+      .query({ limit: 500, search: 'Galway-Renamed' })
+      .expect(200)
+      .expect('content-type', /json/);
+    expect(res.body.total).toBe(1);
+    expect(res.body.rows[0]).toMatchObject({ name: 'Galway-Renamed', acronym: 'GAL2', id: ctyId });
   });
 
   test('DESTROY: DELETE /counties/:id removes the county', async () => {

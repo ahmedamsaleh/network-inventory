@@ -1,0 +1,12 @@
+<% const c = cabinet || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Cabinet</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'cabinet[cabinet]', label: 'Cabinet', value: c.cabinet, required: true, maxlength: 32, pattern: '[A-Za-z0-9_]+', title: 'letters, digits and underscores (the first "-" segment of the hostname)', placeholder: 'e.g. ONGAR', help: 'First segment of the device hostname (ONGAR in ONGAR-R39J-D-IR)' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'cabinet[pop]', label: 'POP short name', value: c.pop, maxlength: 32, placeholder: 'Unknown', help: 'Devices in this cabinet get this POP (and its data) on creation / sync' }) %></div>
+        </div>
+        <%- include('../partials/field', { name: 'cabinet[location]', label: 'Geo-location', value: c.location, maxlength: 128, pattern: '\\s*-?\\d{1,2}(\\.\\d+)?\\s*,\\s*-?\\d{1,3}(\\.\\d+)?\\s*', title: 'latitude,longitude e.g. 53.2412,-6.4367 (or blank)', placeholder: 'latitude,longitude e.g. 53.2412,-6.4367' }) %>
+        <%- include('../partials/field', { name: 'cabinet[locNotes]', label: 'How to reach the location', type: 'textarea', value: c.locNotes, rows: 3, maxlength: 1000 }) %>
+    </div>
+</div>

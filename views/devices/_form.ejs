@@ -1,0 +1,88 @@
+<%#
+  Device form fields shared by new.ejs (device = null) and edit.ejs.
+  Hostname / IP are fixed once the device exists (they identify it and are
+  validated against the inventory on creation).
+%>
+<% const d = device || {}; const editing = Boolean(device); %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Identity</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'device[hostname]', label: 'Hostname', value: d.hostname, required: !editing, readonly: editing, minlength: 5, maxlength: 64, pattern: '[A-Za-z0-9][A-Za-z0-9._\\-]*', title: 'At least 5 characters: letters, digits, dots, dashes, underscores', placeholder: 'e.g. ONGAR-R39J-D-IR', help: editing ? 'The hostname identifies the device and cannot be changed' : 'Convention: <CABINET>-<TYPE><NN><VENDOR>-<POP>-<CTY>' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'device[ipaddress]', label: 'IP address', value: d.ipaddress, required: !editing, readonly: editing, pattern: '((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)', title: 'IPv4 address, e.g. 10.1.2.3', placeholder: '10.1.2.3' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><%- include('../partials/field', { name: 'device[community]', label: 'SNMP community', value: d.community, required: editing, maxlength: 64, placeholder: editing ? '' : 'default community when blank', help: 'IIB placeholders (COMMUNITY_KEYn) are swapped for the real string at sync time' }) %></div>
+            <div class="col-md-6"><%- include('../partials/field', { name: 'device[description]', label: 'Description', value: d.description, maxlength: 200 }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[type]', label: 'Type', type: 'select', value: d.type || '', options: [['', '(resolved from the device model)']].concat((d.type && !types.includes(d.type) ? [d.type] : []).concat(types).map(function (t) { return [t, t]; })) }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[model]', label: 'Model', value: d.model, maxlength: 64, placeholder: 'e.g. MX480', help: 'Vendor / type are filled from the device model catalogue when blank' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[vendor]', label: 'Vendor', value: d.vendor, maxlength: 64, placeholder: 'e.g. Juniper' }) %></div>
+        </div>
+        <% if (editing) { %>
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[defaultCollector]', label: 'Default collector', value: d.defaultCollector, readonly: true }) %></div>
+            <div class="col-md-8"><%- include('../partials/field', { name: 'device[snmpSlow]', label: 'Known to be slow (short SNMP timeout)', type: 'select', value: d.snmpSlow ? 'true' : 'false', options: [['false', 'no - default SNMP profile' + (d.snmpTimeouts ? ' (' + d.snmpTimeouts + ' consecutive timeouts so far)' : '')], ['true', 'yes - poll with the short timeout / fewer retries']] }) %></div>
+        </div>
+        <% } %>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>Location</strong></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="<%= editing ? 'device-pop-name' : 'new-device-pop-name' %>">POP <span class="text-danger" title="required">*</span></label>
+                    <select id="<%= editing ? 'device-pop-name' : 'new-device-pop-name' %>" class="form-control" name="device[popName][name]" required data-init-text="<%= d.popName && d.popName.name %>">
+                        <option value=""></option>
+                        <% if (editing && d.popName && d.popName.id) { %><option value="<%= d.popName.id %>" selected><%= d.popName.name %></option><% } %>
+                    </select>
+                    <p class="help-block">Choose from the POP list (typing filters it)</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="<%= editing ? 'device-sector-name' : 'new-device-sector-name' %>">Sector <span class="text-danger" title="required">*</span></label>
+                    <select id="<%= editing ? 'device-sector-name' : 'new-device-sector-name' %>" class="form-control" name="device[sector][name]" required data-init-text="<%= d.sector && d.sector.name %>">
+                        <option value=""></option>
+                        <% if (editing && d.sector && d.sector.id) { %><option value="<%= d.sector.id %>" selected><%= d.sector.name %></option><% } else if (editing && d.sector && d.sector.name) { %><option value="<%= d.sector.name %>" selected><%= d.sector.name %></option><% } %>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="<%= editing ? 'device-county-name' : 'new-device-county-name' %>">County <span class="text-danger" title="required">*</span></label>
+                    <select id="<%= editing ? 'device-county-name' : 'new-device-county-name' %>" class="form-control" name="device[county][name]" required data-init-text="<%= d.county && d.county.name %>">
+                        <option value=""></option>
+                        <% if (editing && d.county && d.county.id) { %><option value="<%= d.county.id %>" selected><%= d.county.name %></option><% } %>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[cabinet]', label: 'Cabinet', value: d.cabinet, maxlength: 64, placeholder: 'Unkown', help: 'A known cabinet decides the POP and fills the POP data' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[pop]', label: 'POP (short code)', value: d.pop, maxlength: 32, placeholder: 'e.g. ONGAR' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[popLongName]', label: 'POP long name', value: d.popLongName, maxlength: 128, placeholder: 'Unkown' }) %></div>
+        </div>
+        <div class="row">
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[popType]', label: 'POP type', value: d.popType, maxlength: 32, placeholder: 'Unkown' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[cty]', label: 'County (code)', value: d.cty, maxlength: 16, placeholder: 'Unkown' }) %></div>
+            <div class="col-md-4"><%- include('../partials/field', { name: 'device[district]', label: 'District', value: d.district, maxlength: 64, placeholder: 'Unkown' }) %></div>
+        </div>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>BT MSAN reference</strong> <small class="text-muted">filled by the sync from the BT MSAN info matching the management IP</small></div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-md-3"><%- include('../partials/field', { name: 'device[btMSANCode]', label: 'BT MSAN code', value: d.btMSANCode, maxlength: 64 }) %></div>
+            <div class="col-md-3"><%- include('../partials/field', { name: 'device[btMngIP]', label: 'BT management IP', value: d.btMngIP, pattern: '((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)', title: 'IPv4 address or blank' }) %></div>
+            <div class="col-md-3"><%- include('../partials/field', { name: 'device[btSector]', label: 'BT sector', value: d.btSector, maxlength: 64 }) %></div>
+            <div class="col-md-3"><%- include('../partials/field', { name: 'device[btDistrict]', label: 'BT district', value: d.btDistrict, maxlength: 64 }) %></div>
+        </div>
+    </div>
+</div>

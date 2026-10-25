@@ -69,6 +69,18 @@ function embeddedMongoMode() {
   return requested;
 }
 
+function communityAliases() {
+  const aliases = {};
+  for (const [name, value] of Object.entries(env)) {
+    const match = /^COMMUNITY_KEY(\d+)$/.exec(name);
+    if (match && value) {
+      const real = env['COMMUNITY_VALUE' + match[1]];
+      if (real) aliases[value] = real;
+    }
+  }
+  return aliases;
+}
+
 const dbName = env.DEV_DB || 'network-inventory';
 
 const config = {
@@ -106,15 +118,33 @@ const config = {
     // community used when a device is created without one
     // (DEFAULT_SMP_COMMUNITY is accepted as an alias of DEFAULT_SNMP_COMMUNITY)
     defaultCommunity: env.DEFAULT_SNMP_COMMUNITY || env.DEFAULT_SMP_COMMUNITY || 'public',
-    timeoutMs: Number(env.SNMP_TIMEOUT_MS || 10000),
+    version: env.SNMP_VERSION || '2c', // 1 | 2c
+    timeoutMs: Number(env.SNMP_TIMEOUT_MS || 60000),
+    retries: Number(env.SNMP_RETRIES || 5),
     maxRepetitions: Number(env.SNMP_MAX_REPETITIONS || 20),
+    // shorter profile for devices known to be slow (services/snmpProfile.js):
+    // flagged by hand, or after this many consecutive timed-out syncs (0 = never automatic)
+    slowTimeoutMs: Number(env.SNMP_SLOW_TIMEOUT_MS || 10000),
+    slowRetries: Number(env.SNMP_SLOW_RETRIES || 1),
+    slowAfterTimeouts: Number(env.SNMP_SLOW_AFTER_TIMEOUTS || 3),
+    sourceAddress: env.SNMP_SOURCE_ADDRESS || undefined, // local address to send from
+    // placeholder -> real community (IIB rule): COMMUNITY_KEY1/COMMUNITY_VALUE1,
+    // COMMUNITY_KEY2/COMMUNITY_VALUE2, ... The real strings only live in the
+    // environment; the placeholder is what gets stored and logged.
+    communityAliases: communityAliases(),
   },
 
-  // automatic device sync (cron pattern: sec min hour day month weekday)
+  // device synchronisation (services/syncRunner.js)
   sync: {
+    concurrency: Number(env.SYNC_CONCURRENCY || 4),
+    // interfaces missed for more than this many cycles are flagged for deletion
+    cyclesThreshold: Number(env.SYNC_CYCLES_THRESHOLD || 3),
     cron: env.SYNC_CRON || '0 0 0 */2 * *',
     timezone: env.SYNC_TIMEZONE || 'Europe/Dublin',
   },
+
+  // external API key (header x-api-key) for /enrichments/api/*; optional
+  apiKey: env.API_KEY || '',
 
   // administrator account ensured at startup (services/adminAccount.js); optional
   admin: {

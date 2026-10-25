@@ -1,0 +1,10 @@
+<%- include('../partials/header', { pageTitle: 'Audit log' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Audit log', subtitle: 'decommissioning, restores and every permanent deletion', breadcrumbs: [['Audit log']],
+        actions: '<a class="btn btn-default" href="/devices/decommissioned"><i class="fa fa-power-off"></i> Decommissioned devices</a>' }) %>
+    <% if (targetId) { %>
+        <div class="alert alert-info"><i class="fa fa-filter"></i> Showing the entries for target <code><%= targetId %></code> &ndash; <a href="/audit">show all</a></div>
+    <% } %>
+    <%- include('../partials/data-table', { url: '/audit/pagination' + (targetId ? '?filter[targetId]=' + encodeURIComponent(targetId) : ''), columns: columns.auditlogs, sortName: 'at', sortOrder: 'desc', checkbox: false }) %>
+</div>
+<%- include('../partials/footer') %>

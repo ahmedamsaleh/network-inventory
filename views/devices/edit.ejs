@@ -1,133 +1,21 @@
-<%- include('../partials/header') %>
-<div class="container">
-    <!--<will need to create my own style sheet to center the 2 inputs and make them
-    smaller>-->
-    <div class="row">
-        <h1 style="text-align: center;">Edit <%= device.hostname %></h1>
-        <!--<margin 25 px for top and bottom, auto for left and right>-->
-        <div style="width:30%; margin:25px auto;">
-            <form method="POST" action="/devices/<%= device._id %>/?_method=PUT">
-                <!--<use form-group to make spacing between components>-->
-                <div class="form-group">
-                    <label for="hostname">Host Name</label>
-                    <input class="form-control" type="text" name="device[hostname]" value="<%= device.hostname %>" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="ipaddress">IP Address</label>
-                    <input class="form-control" type="text" name="device[ipaddress]" value="<%= device.ipaddress %>" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="community">SNMP Community</label>
-                    <input class="form-control" type="text" name="device[community]" value="<%= device.community %>">
-                </div>
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <input class="form-control" type="text" name="device[description]" value="<%= device.description %>">
-                </div>
-                <div class="form-group">
-                    <label for="defaultCollector">Default Collector</label>
-                    <input class="form-control" type="text" name="device[defaultCollector]" value="<%= device.defaultCollector %>" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="device-pop-name">POP Name</label>
-                    <select id="device-pop-name" class="form-control select2-single" type="text" name="device[popName][name]"  data-init-text="<%= device.popName.name %>" >
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="device-sector-name">Sector Name</label>
-                    <% if(device.sector.name === undefined){ %>
-                        <select id="device-sector-name" class="form-control select2-single" type="text" name="device[sector][name]"  value="<%= device.sector.name %>"  >
-                        </select>
-                    <% } else {  %>
-                        <select id="device-sector-name" class="form-control select2-single" type="text" name="device[sector][name]"  data-init-text="<%= device.sector.name %>"  >
-                        </select>
-                    <%   } %>
-                </div>
-                <div class="form-group">
-                    <label for="device-county-name">County Name</label>
-                    <% if(device.county.name === undefined){ %>
-                    <select id="device-county-name" class="form-control select2-single" type="text" name="device[county][name]"  value="<%= device.county.name %>" >
-                    </select>
-                    <% } else {%>
-                    <select id="device-county-name" class="form-control select2-single" type="text" name="device[county][name]"  data-init-text="<%= device.county.name %>" >
-                    </select>
-                    <% } %>
-                </div>
-                <div class="form-group">
-                    <label for="deviceType">Type</label>
-                    <select id="device-type" class="form-control select2-single" name="device[type]" data-init-text="<%= device.type %>">
-                      <option value="Router">Router</option>
-                      <option value="Switch">Switch</option>
-                      <option value="Access Switch">Access Switch</option>
-                      <option value="DSLAM">DSLAM</option>
-                      <option value="MSAN">MSAN</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <input class="form-control" type="text" name="device[model]" value="<%= device.model %>">
-                </div>
-                <div class="form-group">
-                    <label for="vendor">Vendor</label>
-                    <input class="form-control" type="text" name="device[vendor]" value="<%= device.vendor %>">
-                </div>
-                <div class="form-group">
-                    <label for="pop">POP (short code)</label>
-                    <input class="form-control" type="text" name="device[pop]" value="<%= device.pop %>">
-                </div>
-                <div class="form-group">
-                    <label for="popLongName">POP Long Name</label>
-                    <input class="form-control" type="text" name="device[popLongName]" value="<%= device.popLongName %>">
-                </div>
-                <div class="form-group">
-                    <label for="popType">POP Type</label>
-                    <input class="form-control" type="text" name="device[popType]" value="<%= device.popType %>">
-                </div>
-                <div class="form-group">
-                    <label for="cabinet">Cabinet</label>
-                    <input class="form-control" type="text" name="device[cabinet]" value="<%= device.cabinet %>">
-                </div>
-                <div class="form-group">
-                    <label for="cty">County (code)</label>
-                    <input class="form-control" type="text" name="device[cty]" value="<%= device.cty %>">
-                </div>
-                <div class="form-group">
-                    <label for="district">District</label>
-                    <input class="form-control" type="text" name="device[district]" value="<%= device.district %>">
-                </div>
-                <div class="form-group">
-                    <label for="btMSANCode">BT MSAN Code</label>
-                    <input class="form-control" type="text" name="device[btMSANCode]" value="<%= device.btMSANCode %>">
-                </div>
-                <div class="form-group">
-                    <label for="btMngIP">BT Management IP</label>
-                    <input class="form-control" type="text" name="device[btMngIP]" value="<%= device.btMngIP %>">
-                </div>
-                <div class="form-group">
-                    <label for="btSector">BT Sector</label>
-                    <input class="form-control" type="text" name="device[btSector]" value="<%= device.btSector %>">
-                </div>
-                <div class="form-group">
-                    <label for="btDistrict">BT District</label>
-                    <input class="form-control" type="text" name="device[btDistrict]" value="<%= device.btDistrict %>">
-                </div>
-                <div class="form-group">
-                    <label>Discovery (read only)</label>
-                    <p class="form-control-static">
-                        sysName: <%= device.sysName %><br>
-                        sysObjectID: <%= device.sysObjectID %><br>
-                        sysDescr: <%= device.sysDescr %><br>
-                        last sync: <%= device.lastSyncTime ? device.lastSyncTime.toLocaleString() : '' %> (cycles: <%= device.deviceSyncCycles %>)
-                    </p>
-                </div>
-                <div class="form-group">
-                    <!--<btn-block will let the button takes width of the 2 inputs>-->
-                    <button class="btn btn-lg btn-primary btn-block">Submit!</button>
-                </div>
-            </form>
-            <!--<a href="/devices/<%= device._id %>/">Go Back</a>-->
-            <a href="/devices/">Go Back</a>
+<%- include('../partials/header', { pageTitle: 'Edit ' + device.hostname }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Edit ' + device.hostname, subtitle: device.ipaddress, breadcrumbs: [['Devices', '/devices'], [device.hostname, '/devices/' + device._id], ['Edit']] }) %>
+    <% if (device.decommissioned) { %><div class="alert alert-warning">This device is decommissioned; changes are saved but it stays out of the active lists until an administrator restores it.</div><% } %>
+    <form method="POST" action="/devices/<%= device._id %>?_method=PUT" id="device-form">
+        <%- include('_form', { device: device, types: types }) %>
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Discovery</strong> <small class="text-muted">read only, maintained by the SNMP sync</small></div>
+            <table class="table table-condensed app-details">
+                <tbody>
+                    <tr><th>sysName</th><td><%= h.text(device.sysName) %></td><th>sysObjectID</th><td class="app-mono"><%= h.text(device.sysObjectID) %></td></tr>
+                    <tr><th>sysDescr</th><td colspan="3"><%= h.text(device.sysDescr) %></td></tr>
+                    <tr><th>Last sync</th><td><%= h.dateTime(device.lastSyncTime) || '—' %></td><th>Sync cycles</th><td><%= device.deviceSyncCycles %></td></tr>
+                    <tr><th>Consecutive timeouts</th><td><%= device.snmpTimeouts || 0 %></td><th>Last sync error</th><td><%= h.text(device.lastSyncError) %></td></tr>
+                </tbody>
+            </table>
         </div>
-    </div>
+        <%- include('../partials/form-actions', { label: 'Save changes', cancelHref: '/devices/' + device._id }) %>
+    </form>
 </div>
 <%- include('../partials/footer') %>

@@ -1,0 +1,53 @@
+<%- include('../partials/header', { pageTitle: 'Import devices' }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Import devices', subtitle: 'CSV or XLSX, streamed in batches', breadcrumbs: [['Devices', '/devices'], ['Import']] }) %>
+    <div class="row">
+        <div class="col-md-7">
+            <form method="POST" action="/enrichments/import/devices" enctype="multipart/form-data">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>File</strong></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label for="file">CSV or XLSX file <span class="text-danger">*</span></label>
+                            <input id="file" type="file" name="file" accept=".csv,.xlsx,text/csv" required>
+                        </div>
+                        <%- include('../partials/field', { name: 'sheet', id: 'sheet', label: 'Worksheet (XLSX only)', placeholder: 'default: the first sheet', maxlength: 64 }) %>
+                        <p class="help-block">
+                            Required columns: <code>ipaddress</code>, <code>hostname</code>, <code>community</code> (SNMP community string).
+                            Optional: <%= Object.keys(importColumns).filter(function (c) { return !['ipaddress', 'hostname', 'community'].includes(c); }).join(', ') %>.
+                            Everything else is filled in by the sync. Devices are matched by hostname (existing devices are updated, decommissioned ones are refused);
+                            invalid rows are reported with their row number. Files with tens of thousands of rows are fine.
+                        </p>
+                    </div>
+                </div>
+                <%- include('../partials/form-actions', { label: 'Import', cancelHref: '/devices' }) %>
+            </form>
+        </div>
+        <div class="col-md-5">
+            <div class="panel panel-default">
+                <div class="panel-heading"><strong>Status</strong> <small class="text-muted">of the current / last import</small></div>
+                <div class="panel-body"><pre id="import-status" class="app-mono" style="max-height: 400px; overflow: auto; margin: 0;"><%= JSON.stringify(status, null, 2) %></pre></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    (function () {
+        var box = document.getElementById('import-status');
+        function poll() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/enrichments/import/status');
+            xhr.onload = function () {
+                if (xhr.status !== 200) return;
+                try {
+                    var status = JSON.parse(xhr.responseText);
+                    box.textContent = JSON.stringify(status, null, 2);
+                    if (status.running) setTimeout(poll, 2000);
+                } catch (e) { /* ignore */ }
+            };
+            xhr.send();
+        }
+        setTimeout(poll, 2000);
+    })();
+</script>
+<%- include('../partials/footer') %>

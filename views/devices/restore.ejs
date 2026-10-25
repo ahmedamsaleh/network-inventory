@@ -1,0 +1,25 @@
+<%- include('../partials/header', { pageTitle: 'Restore ' + device.hostname }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Restore ' + device.hostname, subtitle: device.ipaddress, breadcrumbs: [['Devices', '/devices'], ['Decommissioned', '/devices/decommissioned'], [device.hostname, '/devices/' + device._id], ['Restore']] }) %>
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            <div class="alert alert-info">
+                <p><i class="fa fa-info-circle"></i> <strong><%= device.hostname %></strong> (<%= device.ipaddress %>) was decommissioned
+                on <%= h.dateTime(device.decommissionedAt) %>
+                by <%= device.decommissionedBy && device.decommissionedBy.email %><% if (device.decommissionReason) { %>: <em><%= device.decommissionReason %></em><% } %>.</p>
+                <p>Restoring puts it back in the active lists and synchronisation runs and moves its
+                <strong><%= summary.archived %></strong> archived interface record(s) back in service. The action is recorded in the audit log.</p>
+            </div>
+            <form id="restore-form" action="/devices/<%= device._id %>/restore" method="POST">
+                <div class="checkbox">
+                    <label><input type="checkbox" name="confirm" value="yes" required> I confirm that <strong><%= device.hostname %></strong> is to be restored</label>
+                </div>
+                <div class="app-form-actions">
+                    <button class="btn btn-success" type="submit"><i class="fa fa-undo"></i> Restore</button>
+                    <a class="btn btn-default" href="/devices/<%= device._id %>">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

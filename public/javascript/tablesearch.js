@@ -1,82 +1,36 @@
+/* List pages: the checked row of #eventsTable drives the toolbar forms
+ * (views/partials/toolbar.ejs): every form with data-action-template gets its
+ * action filled in ("/pops/{id}/edit"), buttons with data-needs-selection are
+ * enabled, forms with data-confirm ask before submitting. */
 var $j = jQuery.noConflict();
-// normal table
-$j(document).ready(function() {
-  var checkedRows = [];
-
-    $j("#input-id").fileinput({
-        maxFileCount: 10,
-        //uploadUrl: '/links',
-        allowedFileTypes: ["text"],
-        allowedFileExtensions: ["csv"]
-    });
-
-// paginated table		  
-
-var $jtable = $j('#eventsTable');
-  $j($jtable).on('check.bs.table', function (e, row) {
-    $j.each(checkedRows, function(index, value) {
-      console.log(value.id);
-      checkedRows.splice(index,1);
-    });
-    checkedRows.push({id: row._id, name: row.name, acronym: row.acronym});
-    $j.each(checkedRows, function(index, value) {
-        console.log(value.id);
-        $j('#device-delete-form').attr('action', '/devices/'+value.id+'/?_method=DELETE');
-        $j('#device-update-form').attr('action', '/devices/'+value.id+'/edit');
-        $j('#device-sync-form').attr('action', '/devices/sync/'+value.id);
-        $j('#pop-delete-form').attr('action', '/pops/'+value.id+'/?_method=DELETE');
-        $j('#pop-update-form').attr('action', '/pops/'+value.id+'/edit');
-        $j('#county-delete-form').attr('action', '/counties/'+value.id+'/?_method=DELETE');
-        $j('#county-update-form').attr('action', '/counties/'+value.id+'/edit');
-        $j('#link-delete-form').attr('action', '/links/'+value.id+'/?_method=DELETE');
-        $j('#link-update-form').attr('action', '/links/'+value.id+'/edit');
-        $j('#sector-delete-form').attr('action', '/sectors/'+value.id+'/?_method=DELETE');
-        $j('#sector-update-form').attr('action', '/sectors/'+value.id+'/edit');
-        $j('#user-delete-form').attr('action', '/users/'+value.id+'/?_method=DELETE');
-        $j('#user-update-form').attr('action', '/users/'+value.id+'/edit');
-        $j('#validateduser-delete-form').attr('action', '/validatedusers/'+value.id+'/?_method=DELETE');
-        $j('#validateduser-update-form').attr('action', '/validatedusers/'+value.id+'/edit');
-        $j('#interface-delete-form').attr('action', '/interfaces/'+value.id+'/?_method=DELETE');
-        $j('#interface-update-form').attr('action', '/interfaces/'+value.id+'/edit');
-    });
-
+$j(document).ready(function () {
+  $j('#input-id').fileinput({
+    maxFileCount: 10,
+    allowedFileTypes: ['text'],
+    allowedFileExtensions: ['csv'],
   });
-  
-  $j($jtable).on('uncheck.bs.table', function (e, row) {
-      console.log("click-row.bs.table: "+row._id);
-    $j.each(checkedRows, function(index, value) {
-      console.log(value.id);
-      checkedRows.splice(index,1);
-    });
-      console.log(checkedRows);
-  });
-  
-  $j("#county-delete-button").click(function() {
-    // $j("#output").empty();
-    console.log(checkedRows.length);
-    $j.each(checkedRows, function(index, value) {
-      console.log(index);
-      console.log(value);
-      // $j('#output').append($j('<li></li>').text(value.id + " | " + value.name + " | " + value.acronym));
-    });
-  });  
 
-  // //the following lines were only added for testing purpose
-  // $j(".add_cart").click(function() {
-  //   $j("#output").empty();
-  //   $j.each(checkedRows, function(index, value) {
-  //     console.log(index);
-  //     console.log(value);
-  //     $j('#output').append($j('<li></li>').text(value.id + " | " + value.name + " | " + value.acronym));
-  //   });
-  // });  
-  // $j(".myclass").click(function() {
-  //   $j("#output").empty();
-  //   $j.each(checkedRows, function(index, value) {
-  //     console.log(index);
-  //     console.log(value);
-  //     $j('#output').append($j('<li></li>').text(value.id + " | " + value.name + " | " + value.acronym));
-  //   });
-  // });
-  
+  var $table = $j('#eventsTable');
+
+  function applySelection(row) {
+    $j('[data-action-template]').each(function () {
+      var template = $j(this).attr('data-action-template');
+      $j(this).attr('action', row ? template.replace('{id}', row._id) : template.replace('{id}', '-1'));
+    });
+    $j('[data-needs-selection]').prop('disabled', !row);
+  }
+
+  $table.on('check.bs.table', function (e, row) {
+    applySelection(row);
+  });
+  $table.on('uncheck.bs.table uncheck-all.bs.table', function () {
+    applySelection(null);
+  });
+  $table.on('load-success.bs.table', function () {
+    applySelection(null);
+  });
+
+  $j('form[data-confirm]').on('submit', function () {
+    return window.confirm($j(this).attr('data-confirm'));
+  });
 });

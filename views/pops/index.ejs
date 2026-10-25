@@ -1,70 +1,24 @@
-<%- include('../partials/header') %>
-    <!--< the class container will give space around our contents>-->
-
-    <div class="container">
-        <header class="jumbotron">
-            <!--<adding second container to keep spacing around contents when we resize the page>-->
-            <div class="container">
-                <h1>Network Inventory</h1>
-                <p>View POPs Information</p>
-                <div class="btn-group" role="group" aria-label="all">
-                    <a href="/devices/"><button type="button" class="btn btn-default ">All Devices</button></a>
-                    <a href="/pops/"><button type="button" class="btn btn-default active">All POPs</button></a>
-                    <!--<a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces</button></a>-->
-                    <a href="/sectors/"><button type="button" class="btn btn-default">All Sectors</button></a>
-                    <a href="/counties/"><button type="button" class="btn btn-default ">All Counties</button></a>
-                    <a href="/users/"><button type="button" class="btn btn-default">All Users</button></a>
-                    <a href="/links/"><button type="button" class="btn btn-default">All Links</button></a>
-                    <a href="/validatedusers/"><button type="button" class="btn btn-default">All Validated Users</button></a>
-                    <a href="/enrichments/"><button type="button" class="btn btn-default ">All Enrichment Data</button></a>
-                    <a href="/interfaces/"><button type="button" class="btn btn-default">All Interfaces Data</button></a>
-                </div>        
-            </div>
-        </header>
-        <div class="btn-group" role="group" aria-label="pops">
-            <form id="pop-add-form"  class="btn-group" action="/pops/new" method="GET">
-                <button type="button " class="btn  btn-primary">Add POP</button>
+<%- include('../partials/header', { pageTitle: 'POPs' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'POPs', subtitle: 'points of presence', breadcrumbs: [['POPs']],
+        actions: '<a class="btn btn-default" href="/cabinets"><i class="fa fa-archive"></i> Cabinets</a>' }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add POP', href: '/pops/new', cls: 'btn-primary', icon: 'fa-plus', id: 'pop-add-form' },
+        { label: 'Edit POP', template: '/pops/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'pop-update-form' },
+        { label: 'Delete POP', template: '/pops/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'pop-delete-form', confirm: 'Delete the selected POP? The audit log keeps the last copy.' },
+    ] }) %>
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <form action="/pops/import" method="POST" enctype="multipart/form-data" class="form-inline">
+                <div class="form-group">
+                    <label for="pop-import-file"><i class="fa fa-upload"></i> Import the POPs sheet</label>
+                    <input id="pop-import-file" type="file" name="file" accept=".csv,.xlsx,text/csv" required>
+                </div>
+                <button type="submit" class="btn btn-default">Import</button>
+                <span class="help-block" style="display:inline-block; margin:0 0 0 10px">CSV or XLSX ("POPs" sheet): shortName, cty, district, sector, popType, popLongName &ndash; existing POPs are updated by short name.</span>
             </form>
-            <form id="pop-delete-form"  class="btn-group" action="/pops/-1/?_method=DELETE" method="POST">
-                <button id="pop-delete-button"  type="button " class="btn  btn-danger">Delete POP</button>
-            </form>
-            <form id="pop-update-form"  class="btn-group" action="" method="GET">
-                <button type="button " class="btn  btn-warning">Update POP</button>
-            </form>
-        </div>        
-<!--<button class="add_cart">Add to card</button>-->
-<!--<ul id="output"></ul>-->
-<!--<button class="myclass">My Class</button>-->
-
-        <div class="row text-left" >
-            <div class="table-responsive">
-                <table id="eventsTable" data-toggle="table" data-url="/pops/pagination" data-side-pagination="server" data-query-params-type="limit"
-                data-pagination="true" data-page-size="10" data-page-list="[10, 25, 50, 100, 500]" data-search="true"
-                data-height="525" data-maintain-selected="true" data-show-refresh="true" data-show-toggle="true"
-                data-show-columns="true" data-toolbar="#toolbar" data-single-select="true" data-sort-name="name" data-sort-order="asc">
-                    <thead>
-                        <tr>
-                            <th data-field="state" data-checkbox="true"> </th>
-                            <th data-field="_id" data-visible="false">ID</th>
-                            <th data-field="name" data-sortable="true" data-formatter="popLinkFormatter">Name</th>
-                            <th data-field="acronym" data-sortable="true">Acronym</th>
-                            <th data-field="county" data-sortable="true">County</th>
-                            <th data-field="district" data-sortable="true">District</th>
-                            <th data-field="sector" data-sortable="true">Sector</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
         </div>
     </div>
-<script type="text/javascript">
-    function escapeHtml(value) {
-        return String(value === undefined || value === null ? '' : value)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    // bootstrap-table cell formatters (rows come from GET /pops/pagination)
-    function popLinkFormatter(value, row) {
-        return '<a href="/pops/' + row._id + '">' + escapeHtml(value) + '</a>';
-    }
-</script>
+    <%- include('../partials/data-table', { url: '/pops/pagination', columns: columns.pops, sortName: 'name' }) %>
+</div>
 <%- include('../partials/footer') %>

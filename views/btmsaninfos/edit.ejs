@@ -1,0 +1,9 @@
+<%- include('../partials/header', { pageTitle: 'Edit ' + info.msanCode }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Edit ' + info.msanCode, breadcrumbs: [['BT MSAN info', '/btmsaninfos'], [info.msanCode, '/btmsaninfos/' + info._id], ['Edit']] }) %>
+    <form method="POST" action="/btmsaninfos/<%= info._id %>/?_method=PUT">
+        <%- include('_form', { info: info }) %>
+        <%- include('../partials/form-actions', { label: 'Save changes', cancelHref: '/btmsaninfos/' + info._id }) %>
+    </form>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,8 @@
+<% const g = county || {}; %>
+<div class="panel panel-default">
+    <div class="panel-heading"><strong>County</strong></div>
+    <div class="panel-body">
+        <%- include('../partials/field', { name: 'county[name]', label: 'Name', value: g.name, required: true, maxlength: 64, placeholder: 'e.g. Dublin' }) %>
+        <%- include('../partials/field', { name: 'county[acronym]', label: 'Acronym', value: g.acronym, maxlength: 6, pattern: '[A-Za-z0-9]{1,6}', title: '1-6 letters or digits', placeholder: 'e.g. DUB', help: 'Stored upper-case; used as the county code of POPs and devices' }) %>
+    </div>
+</div>

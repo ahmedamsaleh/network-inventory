@@ -1,38 +1,42 @@
-<%- include('../partials/header') %>
-<div class="container">
+<%- include('../partials/header', { pageTitle: 'Add interface to ' + device.hostname }) %>
+<div class="container app-form">
+    <%- include('../partials/page-header', { title: 'Add an interface', subtitle: 'to ' + device.hostname, breadcrumbs: [['Devices', '/devices'], [device.hostname, '/devices/' + device._id], ['Add interface']] }) %>
     <div class="row">
-        <h1 style="text-align: center">Add New Interface to <%= device.hostname %></h1>
-        <div style="width: 30%; margin: 25px auto;">
-            <form action="/interfaces" method="POST">
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[name]" placeholder="ifName">
+        <div class="col-md-8 col-md-offset-2">
+            <p class="text-muted">Interfaces are normally discovered by the SNMP sync. A hand-made entry is kept in sync by ifIndex afterwards; the alias is parsed like a discovered one (special service, speeds, labels).</p>
+            <form action="/interfaces" method="POST" id="interface-form">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>SNMP identity</strong></div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[ifName]', label: 'ifName', required: true, maxlength: 255, placeholder: 'e.g. ge-0/0/0' }) %></div>
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[ifIndex]', label: 'ifIndex', type: 'number', required: true, min: 0, step: 1, placeholder: 'SNMP interface index' }) %></div>
+                        </div>
+                        <%- include('../partials/field', { name: 'interface[ifAlias]', label: 'ifAlias', maxlength: 255, placeholder: 'e.g. INT-IPT-Cogent-DUB-10GIG-B2-NB-L22-1_300050661-EIG_IPT_10G_0019-EIG', help: 'Parsed on save (special service, provider, speed ...)' }) %>
+                        <div class="row">
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[ifDescr]', label: 'ifDescr', maxlength: 255 }) %></div>
+                            <div class="col-md-3"><%- include('../partials/field', { name: 'interface[ifType]', label: 'ifType (number)', type: 'number', min: 0, step: 1, placeholder: '6 = ethernet' }) %></div>
+                            <div class="col-md-3"><%- include('../partials/field', { name: 'interface[ifSpeed]', label: 'ifSpeed (bit/s)', type: 'number', min: 0, step: 'any', placeholder: '1000000000' }) %></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[adminStatus]', label: 'Admin status', type: 'select', value: 'up', options: ['up', 'down', 'testing'] }) %></div>
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[operStatus]', label: 'Oper status', type: 'select', value: 'up', options: ['up', 'down', 'testing'] }) %></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[alias]" placeholder="ifAlias">
+                <div class="panel panel-default">
+                    <div class="panel-heading"><strong>Device</strong></div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[device][hostname]', label: 'Hostname', value: device.hostname, readonly: true }) %></div>
+                            <div class="col-md-6"><%- include('../partials/field', { name: 'interface[device][ipaddress]', label: 'IP address', value: device.ipaddress, readonly: true }) %></div>
+                        </div>
+                        <%- include('../partials/field', { name: 'interface[device][id]', type: 'hidden', value: device._id }) %>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[index]" placeholder="ifIndex">
-                </div>
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[type]" placeholder="ifType">
-                </div>
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[speed]" placeholder="actual ifSpeed">
-                </div>
-                <div class="form-group">
-                    <input class="form-control" type="text" name="interface[device][hostname]" value="<%= device.hostname %>" readonly>
-                </div>
-                <div class="form-group">
-                    <input class="form-control" type="hidden" name="interface[device][id]" value="<%= device._id %>" readonly>
-                    <input class="form-control" type="hidden" name="interface[device][ipaddress]" value="<%= device.ipaddress %>" readonly>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-lg btn-primary btn-block">Add Interface</button>
-                </div>
+                <%- include('../partials/form-actions', { label: 'Add interface', cancelHref: '/devices/' + device._id }) %>
             </form>
-            <a href="/devices/<%= device._id %>">Go Back</a>
         </div>
     </div>
 </div>
 <%- include('../partials/footer') %>
-

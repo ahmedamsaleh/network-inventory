@@ -1,0 +1,18 @@
+<%#
+  Two-column key/value table for show pages.
+    rows   [[label, value, { raw: true | cls: '...' }]]  (value '' / null -> muted dash)
+    title  (optional) panel heading
+%>
+<div class="panel panel-default app-details">
+    <% if (typeof title !== 'undefined' && title) { %><div class="panel-heading"><strong><%= title %></strong></div><% } %>
+    <table class="table table-condensed table-hover">
+        <tbody>
+        <% rows.forEach(function (row) { const opts = row[2] || {}; const v = row[1]; const blank = v === undefined || v === null || String(v).trim() === ''; %>
+            <tr>
+                <th><%= row[0] %></th>
+                <td class="<%= opts.cls || '' %>"><% if (blank) { %><span class="text-muted">&mdash;</span><% } else if (opts.raw) { %><%- v %><% } else if (v === 'Unknown' || v === 'Unkown') { %><span class="text-muted"><%= v %></span><% } else { %><%= v %><% } %></td>
+            </tr>
+        <% }); %>
+        </tbody>
+    </table>
+</div>

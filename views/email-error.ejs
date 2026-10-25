@@ -1,7 +1,11 @@
-<%- include('partials/header') %>
+<%- include('partials/header', { pageTitle: 'Sign up' }) %>
 <div class="container">
     <div class="row">
-        <h2>User Not Allowed Please Check with Your Admin</h2> 
+        <div class="col-md-6 col-md-offset-3 text-center" style="margin-top: 40px;">
+            <h1><i class="fa fa-ban text-danger"></i> User not allowed</h1>
+            <p class="lead"><%= typeof email !== 'undefined' && email ? email + ' is' : 'This e-mail address is' %> not on the list of validated users. Please check with your administrator.</p>
+            <a href="/signup" class="btn btn-default">Back to sign up</a>
+        </div>
     </div>
 </div>
 <%- include('partials/footer') %>

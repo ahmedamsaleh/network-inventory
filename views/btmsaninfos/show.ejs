@@ -1,0 +1,23 @@
+<%- include('../partials/header', { pageTitle: info.msanCode }) %>
+<%
+  let actions = '<a class="btn btn-warning" href="/btmsaninfos/' + info._id + '/edit"><i class="fa fa-pencil"></i> Edit</a>';
+  actions += '<form id="delete-form" action="/btmsaninfos/' + info._id + '/?_method=DELETE" method="POST" data-confirm="Delete BT MSAN entry ' + info.msanCode + '? The audit log keeps the last copy."><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></form>';
+%>
+<div class="container">
+    <%- include('../partials/page-header', { title: info.msanCode, subtitle: 'BT MSAN', breadcrumbs: [['BT MSAN info', '/btmsaninfos'], [info.msanCode]], actions: actions }) %>
+    <div class="row">
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'BT MSAN', rows: [
+                ['MSAN code', info.msanCode], ['Management IP', info.mngIP], ['Sector', info.sector], ['District', info.district], ['Notes', info.notes],
+            ] }) %>
+        </div>
+        <div class="col-md-6">
+            <%- include('../partials/details', { title: 'Usage', rows: [
+                ['Matching device', typeof device !== 'undefined' && device ? '<a href="/devices/' + device._id + '">' + device.hostname + '</a> (' + device.ipaddress + ')' : 'no device has this management IP', { raw: true, cls: typeof device !== 'undefined' && device ? '' : 'text-muted' }],
+                ['Created', h.dateTime(info.createdAt) + (info.author && info.author.email ? ' by ' + info.author.email : '')],
+                ['Last update', h.dateTime(info.lastUpdate)],
+            ] }) %>
+        </div>
+    </div>
+</div>
+<%- include('../partials/footer') %>

@@ -433,8 +433,8 @@ function parseHostname(hostname, lookups) {
   return {
     popName: nameFields[0],
     popCty: nameFields[2],
-    deviceType: (tables.deviceType || {})[code.charAt(0)],
-    deviceVendor: (tables.deviceVendor || {})[code.charAt(3)],
+    deviceType: (tables.deviceType || {})[code.charAt(0).toUpperCase()],
+    deviceVendor: (tables.deviceVendor || {})[code.charAt(3).toUpperCase()],
   };
 }
 

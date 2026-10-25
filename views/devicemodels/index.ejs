@@ -1,0 +1,11 @@
+<%- include('../partials/header', { pageTitle: 'Device models' }) %>
+<div class="container">
+    <%- include('../partials/page-header', { title: 'Device models', subtitle: 'vendor / type resolved from sysObjectID or model name', breadcrumbs: [['Device models']] }) %>
+    <%- include('../partials/toolbar', { buttons: [
+        { label: 'Add device model', href: '/devicemodels/new', cls: 'btn-primary', icon: 'fa-plus', id: 'devicemodel-add-form' },
+        { label: 'Edit device model', template: '/devicemodels/{id}/edit', method: 'GET', cls: 'btn-warning', icon: 'fa-pencil', id: 'devicemodel-update-form' },
+        { label: 'Delete device model', template: '/devicemodels/{id}/?_method=DELETE', method: 'POST', cls: 'btn-danger', icon: 'fa-trash', id: 'devicemodel-delete-form', confirm: 'Delete the selected device model? The audit log keeps the last copy.' },
+    ] }) %>
+    <%- include('../partials/data-table', { url: '/devicemodels/pagination', columns: columns.devicemodels, sortName: 'name' }) %>
+</div>
+<%- include('../partials/footer') %>

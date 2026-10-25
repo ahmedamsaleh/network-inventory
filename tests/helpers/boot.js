@@ -57,6 +57,13 @@ async function bootApp() {
   // administrator account ensured by the app at startup (services/adminAccount.js)
   process.env.ADMIN_EMAIL = ADMIN.email;
   process.env.ADMIN_PASSWORD = ADMIN.password;
+  // keep background SNMP discovery of fake devices short during the tests
+  process.env.SNMP_TIMEOUT_MS = process.env.SNMP_TIMEOUT_MS || '500';
+  process.env.SNMP_RETRIES = process.env.SNMP_RETRIES || '0';
+  // IIB community rule fixtures (tests/sync.test.js)
+  process.env.API_KEY = 'test-api-key';
+  process.env.COMMUNITY_KEY1 = 'iib-placeholder';
+  process.env.COMMUNITY_VALUE1 = 'real-secret-community';
   process.env.IP = '127.0.0.1';
   process.env.PORT = String(port);
   process.env.DEV_DB =
@@ -97,6 +104,12 @@ async function bootApp() {
       County: mongoose.model('County'),
       Link: mongoose.model('Link'),
       Enrichment: mongoose.model('Enrichment'),
+      RawInterface: mongoose.model('RawInterface'),
+      Cabinet: mongoose.model('Cabinet'),
+      DeviceModel: mongoose.model('DeviceModel'),
+      BTMSANInfo: mongoose.model('BTMSANInfo'),
+      AuditLog: mongoose.model('AuditLog'),
+      ArchivedInterface: mongoose.model('ArchivedInterface'),
     },
     /** anonymous (cookie-less) client */
     anon: () => request(baseUrl),
@@ -123,8 +136,8 @@ async function bootApp() {
  * POST /signup, then e-mail verification via the authToken stored on the
  * user document) and returns a logged-in supertest agent.
  */
-async function signupVerifiedUser(app, { name, email, password }) {
-  await app.models.ValidatedUser.create({ name, email, role: 'admin' });
+async function signupVerifiedUser(app, { name, email, password, role }) {
+  await app.models.ValidatedUser.create({ name, email, role: role || 'admin' });
   await app
     .anon()
     .post('/signup')
@@ -163,4 +176,29 @@ async function authedAgent(app, creds) {
   return { agent, user: dbUser, creds: user };
 }
 
-module.exports = { bootApp, authedAgent, adminAgent, signupVerifiedUser, loginAgent, sleep, ADMIN };
+/** signup + verify + login of a user whitelisted with the "operator" role */
+async function operatorAgent(app, creds) {
+  return authedAgent(
+    app,
+    Object.assign(
+      {
+        name: 'Operator',
+        email: 'operator@example.com',
+        password: 'operator123',
+        role: 'operator',
+      },
+      creds || {}
+    )
+  );
+}
+
+module.exports = {
+  bootApp,
+  authedAgent,
+  adminAgent,
+  operatorAgent,
+  signupVerifiedUser,
+  loginAgent,
+  sleep,
+  ADMIN,
+};

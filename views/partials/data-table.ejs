@@ -1,0 +1,43 @@
+<%#
+  bootstrap-table with server-side pagination, identical on every list page.
+    url        JSON endpoint answering { total, rows } (services/pagination.js)
+    columns    [{ field, title, sortable, visible, formatter, align }]
+    sortName / sortOrder   default sort
+    checkbox   (default true) selection column that drives the toolbar forms
+    pageSize   (default 25)
+    id         (default "eventsTable")
+  The page's own query string (?search=...&filter[...]=...) is forwarded to
+  the endpoint, so links like /devices?filter[vendor]=Juniper pre-filter the
+  list; a ?search= value is also put in the search box.
+%>
+<%
+  const tableId = typeof id !== 'undefined' && id ? id : 'eventsTable';
+  const withCheckbox = typeof checkbox === 'undefined' ? true : checkbox;
+  const size = typeof pageSize === 'undefined' ? 25 : pageSize;
+  const order = typeof sortOrder === 'undefined' ? 'asc' : sortOrder;
+  const pageQuery = typeof currentQuery === 'string' ? currentQuery : '';
+  const fullUrl = pageQuery ? url + (url.indexOf('?') === -1 ? '?' : '&') + pageQuery : url;
+  const searchMatch = /(?:^|&)search=([^&]*)/.exec(pageQuery);
+  const searchText = searchMatch ? decodeURIComponent(searchMatch[1].replace(/\+/g, ' ')) : '';
+%>
+<div class="table-responsive app-table">
+    <table id="<%= tableId %>" data-toggle="table" data-url="<%= fullUrl %>" data-side-pagination="server" data-query-params-type="limit"
+           data-pagination="true" data-page-size="<%= size %>" data-page-list="[10, 25, 50, 100, 500]" data-search="true"
+           data-show-refresh="true" data-show-toggle="true" data-show-columns="true" data-maintain-selected="true"
+           data-single-select="true" data-click-to-select="true" data-sort-name="<%= sortName %>" data-sort-order="<%= order %>"
+           data-striped="true" data-show-export="false" <%- searchText ? 'data-search-text="' + searchText.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"' : '' %> data-icons-prefix="fa" data-icons='{"refresh":"fa-refresh","toggle":"fa-list-alt","columns":"fa-th"}'>
+        <thead>
+            <tr>
+                <% if (withCheckbox) { %><th data-field="state" data-checkbox="true"></th><% } %>
+                <th data-field="_id" data-visible="false">ID</th>
+                <% columns.forEach(function (column) { %>
+                <th data-field="<%= column.field %>"
+                    data-sortable="<%= column.sortable === false ? 'false' : 'true' %>"
+                    data-visible="<%= column.visible === false ? 'false' : 'true' %>"
+                    <%- column.formatter ? 'data-formatter="' + column.formatter + '"' : '' %>
+                    <%- column.align ? 'data-align="' + column.align + '"' : '' %>><%= column.title %></th>
+                <% }); %>
+            </tr>
+        </thead>
+    </table>
+</div>

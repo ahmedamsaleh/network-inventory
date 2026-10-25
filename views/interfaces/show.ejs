@@ -1,0 +1,44 @@
+<%- include('../partials/header', { pageTitle: (interface.ifName || interface.name || 'Interface') + ' on ' + (interface.hostname || '') }) %>
+<%
+  const groups = [];
+  for (const field of fields) {
+    let group = groups.find((g) => g.name === field.group);
+    if (!group) { group = { name: field.group, fields: [] }; groups.push(group); }
+    group.fields.push(field);
+  }
+  const hostname = interface.hostname || (interface.device && interface.device.hostname) || '';
+  const name = interface.ifName || interface.name || '';
+  function display(field) {
+    const value = interface[field.name];
+    if (value === undefined || value === null || value === '') return '';
+    if (field.kind === 'date') return h.dateTime(value);
+    if (field.kind === 'boolean') return '<span class="label ' + (value ? 'label-success' : 'label-default') + '">' + h.yesNo(value) + '</span>';
+    if (field.kind === 'json') return '<pre class="app-mono" style="margin:0">' + JSON.stringify(value, null, 1).replace(/</g, '&lt;') + '</pre>';
+    if (field.kind === 'number' && /speed|Octets|Bandwidth/i.test(field.name)) {
+      return h.number(value) + (/speed$/i.test(field.name) && field.name !== 'ifHighSpeed' ? ' <span class="text-muted">' + h.bitrate(value) + '</span>' : '');
+    }
+    if (field.name === 'hostname' && owner) return '<a href="/devices/' + owner._id + '">' + String(value).replace(/</g, '&lt;') + '</a>';
+    if (field.name === 'adminStatus' || field.name === 'operStatus') return '<span class="label ' + h.statusClass(value) + '">' + String(value).replace(/</g, '&lt;') + '</span>';
+    if (value === 'Unknown' || value === 'Unkown') return '<span class="text-muted">' + value + '</span>';
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  }
+  let actions = '<a class="btn btn-warning" href="/interfaces/' + interface._id + '/edit"><i class="fa fa-pencil"></i> Edit</a>';
+  if (owner) actions += '<a class="btn btn-default" href="/devices/' + owner._id + '"><i class="fa fa-server"></i> Device page</a>';
+  actions += '<form id="delete-form" action="/interfaces/' + interface._id + '/?_method=DELETE" method="POST" data-confirm="Delete interface ' + name + '? The audit log keeps the last copy."><button class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button></form>';
+%>
+<div class="container">
+    <%- include('../partials/page-header', { title: name, subtitle: 'on ' + hostname + (interface.ifAlias ? ' - ' + interface.ifAlias : ''), breadcrumbs: [['Interfaces', '/interfaces'], [hostname, owner ? '/devices/' + owner._id : null], [name]], actions: actions }) %>
+    <% if (owner && owner.decommissioned) { %><div class="alert alert-warning"><i class="fa fa-power-off"></i> The owning device <%= owner.hostname %> is decommissioned.</div><% } %>
+    <div class="row">
+        <% groups.forEach(function (group, index) { %>
+        <% if (index % 2 === 0) { %><div class="col-md-6"><% } %>
+            <%- include('../partials/details', { title: group.name, rows: group.fields.map(function (field) { return [field.label, display(field), { raw: true }]; }) }) %>
+        <% if (index % 2 === 1 || index === groups.length - 1) { %></div><% } %>
+        <% }); %>
+    </div>
+    <%- include('../partials/details', { title: 'History', rows: [
+        ['Created', h.dateTime(interface.createdAt || interface.created) + (interface.author && interface.author.email ? ' by ' + interface.author.email : '')],
+        ['Last update', h.dateTime(interface.lastUpdate || interface.updated) + (interface.lastUpdatedBy && interface.lastUpdatedBy.email ? ' by ' + interface.lastUpdatedBy.email : '')],
+    ] }) %>
+</div>
+<%- include('../partials/footer') %>

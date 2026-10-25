@@ -1,83 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Network Inventory</title>
-	<link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/app.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/font-awesome.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/search.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-table.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/fileinput.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-select.min.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/popupS.css">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/select2.min.css" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/select2-bootstrap.css" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="/stylesheets/dropzone.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= typeof pageTitle !== 'undefined' && pageTitle ? pageTitle + ' - ' : '' %>Network Inventory</title>
+    <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/font-awesome.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/search.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-table.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/fileinput.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/bootstrap-select.min.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/popupS.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/select2.min.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/select2-bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/dropzone.css">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/app.css">
 
-<!--<script src="/javascript/ajax/jquery.js" type="text/javascript" charset="utf-8"></script>-->
-	<script src="/javascript/popupS.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/jquery-3.2.1.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/bootstrap-table.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/tablesearch.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/plugins/piexif.min.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/plugins/sortable.min.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/plugins/purify.min.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/fileinput.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/bootstrap.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/bootstrap-select.min.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/select2-texture.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/select2.full.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/selects.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/dropzone.js" type="text/javascript" charset="utf-8"></script>
-	<script src="/javascript/dropzone-texture.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/popupS.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/jquery-3.2.1.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/bootstrap-table.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/formatters.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/tablesearch.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/plugins/piexif.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/plugins/sortable.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/plugins/purify.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/fileinput.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/bootstrap-select.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/select2.full.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/select2-texture.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/selects.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/dropzone.js" type="text/javascript" charset="utf-8"></script>
+    <script src="/javascript/dropzone-texture.js" type="text/javascript" charset="utf-8"></script>
 </head>
 <body>
-	<nav class="navbar navbar-default">
-		<div class="container-fluid">
-			<!-- Brand and toggle get grouped for better mobile display -->
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-					<span class="sr-only">Toggle navigation</span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-					<span class="icon-bar"></span>
-				</button>
-				<a class="navbar-brand" href="#">Network Inventory</a>
-			</div>
-
-			<!-- Collect the nav links, forms, and other content for toggling -->
-			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-				<ul class="nav navbar-nav">
-					<li class="active"><a href="/home">Home</a> </li>        
-					<li><a href="">About</a> </li>        
-					<li><a href="">Contact</a> </li>        
-				</ul>
-				
-				<ul class="nav navbar-nav navbar-right">
-					<% if(!currentUser){ %>
-						<li><a href="/signup">Sign Up <i class="fa fa-user-plus"></i></a></li>
-						<li><a href="/login">Login <i class="fa fa-user"></i></a></li>
-					<% } else { %>
-						<li><a href="#">Signed As <%= currentUser.name %></a></li>
-						<li><a href="/logout">Logout</a></li>
-					<% } %>
-				</ul>
-			</div><!-- /.navbar-collapse -->
-		</div><!-- /.container-fluid -->
-	</nav>
-
+<%
+  // navigation: groups of [label, href]; a link is active when the current path starts with it
+  const path = typeof currentPath === 'string' ? currentPath : '';
+  const isActive = (href) => path === href || (href !== '/' && path.indexOf(href + '/') === 0) || (href !== '/' && path === href.replace(/\/$/, ''));
+  const navGroups = [
+    { label: 'Inventory', icon: 'fa-sitemap', links: [
+      ['/devices', 'Devices', 'fa-server'], ['/interfaces', 'Interfaces', 'fa-plug'], ['/links', 'Links', 'fa-exchange'],
+      ['/pops', 'POPs', 'fa-building'], ['/cabinets', 'Cabinets', 'fa-archive'], ['/devices/decommissioned', 'Decommissioned devices', 'fa-power-off'],
+    ]},
+    { label: 'Reference', icon: 'fa-book', links: [
+      ['/devicemodels', 'Device models', 'fa-cubes'], ['/btmsaninfos', 'BT MSAN info', 'fa-list-alt'],
+      ['/sectors', 'Sectors', 'fa-map'], ['/counties', 'Counties', 'fa-globe'],
+    ]},
+    { label: 'Data', icon: 'fa-database', links: [
+      ['/enrichments/import', 'Import devices (CSV/XLSX)', 'fa-upload'], ['/enrichments/new', 'Import enrichment data', 'fa-upload'],
+      ['/enrichments/export', 'Export data', 'fa-download'], ['/enrichments', 'Enrichment table', 'fa-table'],
+    ]},
+    { label: 'Admin', icon: 'fa-cog', links: [
+      ['/users', 'Users', 'fa-users'], ['/validatedusers', 'Validated users', 'fa-user-plus'], ['/audit', 'Audit log', 'fa-history'],
+    ]},
+  ];
+  const groupActive = (group) => group.links.some(([href]) => isActive(href) && !(href === '/devices' && isActive('/devices/decommissioned')));
+%>
+<nav class="navbar navbar-default navbar-static-top app-navbar">
     <div class="container">
-        <% if(error && error.length > 0){ %>
-	        <div class="alert alert-danger" role="alert">
-	            <%= error %></h1>        
-	        </div>
-        <% } %>
-        <% if(success && success.length > 0){ %>
-	        <div class="alert alert-success" role="alert">
-	            <%= success %></h1>        
-	        </div>
-        <% } %>
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#app-navbar" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/home"><i class="fa fa-database"></i> Network Inventory</a>
+        </div>
+        <div class="collapse navbar-collapse" id="app-navbar">
+            <ul class="nav navbar-nav">
+                <li class="<%= path === '/home' ? 'active' : '' %>"><a href="/home"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+                <% navGroups.forEach(function (group) { %>
+                <li class="dropdown <%= groupActive(group) ? 'active' : '' %>">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa <%= group.icon %>"></i> <%= group.label %> <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <% group.links.forEach(function (link) { %>
+                        <li class="<%= isActive(link[0]) ? 'active' : '' %>"><a href="<%= link[0] %>"><i class="fa fa-fw <%= link[2] %>"></i> <%= link[1] %></a></li>
+                        <% }); %>
+                    </ul>
+                </li>
+                <% }); %>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <% if (!currentUser) { %>
+                    <li class="<%= path === '/signup' ? 'active' : '' %>"><a href="/signup"><i class="fa fa-user-plus"></i> Sign up</a></li>
+                    <li class="<%= path === '/login' ? 'active' : '' %>"><a href="/login"><i class="fa fa-sign-in"></i> Login</a></li>
+                <% } else { %>
+                    <li><a href="/users/<%= currentUser._id %>"><i class="fa fa-user"></i> <%= currentUser.name || currentUser.email %> <span class="label <%= isAdmin ? 'label-primary' : 'label-default' %>"><%= currentUser.role %></span></a></li>
+                    <li><a href="/logout"><i class="fa fa-sign-out"></i> Logout</a></li>
+                <% } %>
+            </ul>
+        </div>
     </div>
+</nav>
 
-
+<div class="container app-flashes">
+    <% [['error', 'danger', 'fa-exclamation-circle'], ['warning', 'warning', 'fa-exclamation-triangle'], ['success', 'success', 'fa-check-circle']].forEach(function (kind) { %>
+        <% const messages = typeof locals[kind[0]] !== 'undefined' ? locals[kind[0]] : []; %>
+        <% (Array.isArray(messages) ? messages : [messages]).filter(Boolean).forEach(function (message) { %>
+        <div class="alert alert-<%= kind[1] %> alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <i class="fa <%= kind[2] %>"></i> <%= message %>
+        </div>
+        <% }); %>
+    <% }); %>
+</div>
