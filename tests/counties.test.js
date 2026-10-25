@@ -97,10 +97,7 @@ describe('County CRUD (authenticated)', () => {
   });
 
   test('PAGINATION: GET /counties/pagination returns JSON (limit 500)', async () => {
-    const res = await agent
-      .get('/counties/pagination')
-      .expect(200)
-      .expect('content-type', /json/);
+    const res = await agent.get('/counties/pagination').expect(200).expect('content-type', /json/);
     expect(res.body).toMatchObject({ limit: 500 });
     expect(res.body.docs.map((d) => d.name)).toContain('Galway-Renamed');
   });
